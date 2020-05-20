@@ -43,14 +43,14 @@ result:     dq  0, 0, 0
             dq  0, 0, 0
 lowest_sad:   dq  255
 
-    global main
+    ;global main
     extern printf
     extern exit
 
     %define offset  8
     %define t_height 3
     %define t_width 3
-main:
+main1:
     ; register usage:
 	; 	Bytes Location  Description
     ;       8 r14       displacement between first element and current element
@@ -100,8 +100,8 @@ main:
     ; print template
     lea     rdi, [template]
     mov     rsi, 9
-    call    print_arr
-
+    call    print_arr	
+	
     lea     rdi, [newline]
     mov     al, byte 0
     call 	[printf wrt ..got]
@@ -223,16 +223,12 @@ PRINT_RESULTS:
     ; print result matrix
     ;~ lea     rdi, [result]
     ;~ mov     rsi, 9
-    ;~ call    print_arr
+    ;~ call    print_ar
     
     lea		rdi, [format]
     mov		rsi, [lowest_sad]
     mov		al, byte 0
     call	[printf wrt ..got]
-
-    lea     rdi, [newline]
-    mov     al, byte 0
-    call [printf wrt ..got]
 
     ; loop if (index_y < max_col)
     call [exit wrt ..got]
@@ -251,6 +247,7 @@ PRINT_RESULTS:
 ; rcx: address of frame
 ;  r8: frame height 
 ;  r9: frame width
+global sad
 sad:
     ; register usage:
 	; 	Bytes Location  Description
