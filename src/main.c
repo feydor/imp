@@ -2,7 +2,7 @@
 #include "../include/common.h"
 
 #define OPTSTR "vi:o:f:h"
-#define USAGE_FMT  "%s [-v] [-f hexflag] [-i inputfile] [-o outputfile] [-h]"
+#define USAGE_FMT  "%s [-v] [-f hexflag] [-i inputfile] [-o outputfile] [-h]\n"
 #define ERR_FOPEN_INPUT  "fopen(input, r)"
 #define ERR_FOPEN_OUTPUT "fopen(output, w)"
 #define ERR_SAD_EXIT "run_sad blew up"
@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     while ((opt = getopt(argc, argv, OPTSTR)) != EOF)
        switch(opt) {
            case 'i':
-              if (!(options.input = fopen(optarg, "r")) ){
+              if (!(options.input = fopen(optarg, "rb")) ){
                  perror(ERR_FOPEN_INPUT);
                  exit(EXIT_FAILURE);
                  /* NOTREACHED */
@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
 }
 
 void usage(char *progname, int opt) {
+   (void) opt;
    fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
    exit(EXIT_FAILURE);
    /* NOTREACHED */

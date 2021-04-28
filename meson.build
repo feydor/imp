@@ -12,9 +12,11 @@ gen = generator(yasm,
 
 yasm_objs = gen.process(yasm_src)
 
-src_c = ['src/main.c', 'src/sad-test.c']
+src_c = ['src/main.c', 'src/sad-test.c', 'src/bmp.c']
+incl_dir = include_directories('include')
 
 src_c += yasm_objs
 exe = executable('sadx64',
            sources: src_c,
+           include_directories: incl_dir,
            install : true)
