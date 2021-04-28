@@ -1,10 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <time.h>
-#include <assert.h>
+/* sadx64.c */
+#include "../include/common.h"
 
-/* Function prototypes */
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 #define FRAME_HEIGHT 10
@@ -13,11 +9,22 @@
 // Link this program with an external C or x86-64 compression function
 extern int sad(uint64_t* template, uint64_t starting_row,
 	uint64_t starting_col, uint64_t* frame, uint64_t f_height, uint64_t f_width);
-int self_test(void);
+static int self_test(void);
 
-/* Main function */
-int main(void) {
-	if (!self_test()) {
+int run_sad(options_t *options) {
+    if (!options) {
+      errno = EINVAL;
+      return EXIT_FAILURE;
+    }
+    
+    /*
+    if (!options->input || !options->output) {
+      errno = ENOENT;
+      return EXIT_FAILURE;
+    }
+    */
+   
+    if (!self_test()) {
 		printf("Self test failed!\n");
 		return EXIT_FAILURE;
 	}
