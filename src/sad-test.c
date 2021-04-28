@@ -20,12 +20,11 @@ int run_sad(options_t *options) {
       /* NOTREACHED */
     }
     
-    /*
-    if (!options->input || !options->output) {
+    if (!options->input) {
       errno = ENOENT;
       return EXIT_FAILURE;
+      /* NOTREACHED */
     }
-    */
    
     if (!self_test()) {
 		printf("Self test failed!\n");
@@ -35,18 +34,26 @@ int run_sad(options_t *options) {
 	
 	printf("Self test passed!\n");
     
+    /* handle user-provided file */
     if (options->input) {
-        if(!parse_24bit_bmp(options->input)) {
+        BITMAPINFOHEADER biHeader;
+        unsigned char *bmpData;
+        if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
             errno = ENOENT;
             return EXIT_FAILURE;
             /* NOTREACHED */
         }
+        
+        print_biHeader(&biHeader);
+        free(bmpData);
     }
-	
-	// do benchmarking
-    run_benchmarks();
-	
+    
+    if (options->verbose) {
+        run_benchmarks();
+    }
+    
 	return EXIT_SUCCESS;
+    /* NOTREACHED */
 }
 
 void run_benchmarks() {
@@ -99,10 +106,8 @@ int self_test(void) {
 		7, 5, 9
 	 };
      
-     int res = 0;
-     res = sad(template, 0, 0, frame, 3, 5);
-     printf("%d\n", res);
-     assert(20 == res);
+     assert(20 == sad(template, 0, 0, frame, 3, 5));
 
-	return 1;
+	 return 1;
 }
+

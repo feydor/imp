@@ -3,10 +3,6 @@
 
 #define OPTSTR "vi:o:f:h"
 #define USAGE_FMT  "%s [-v] [-f hexflag] [-i inputfile] [-o outputfile] [-h]\n"
-#define ERR_FOPEN_INPUT  "fopen(input, r)"
-#define ERR_FOPEN_OUTPUT "fopen(output, w)"
-#define ERR_SAD_EXIT "run_sad blew up"
-#define DEFAULT_PROGNAME "sadx64"
 
 extern int errno;
 extern char *optarg; /* for use with getopt() */
