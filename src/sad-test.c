@@ -36,7 +36,7 @@ int run_sad(options_t *options) {
 	printf("Self test passed!\n");
     
     /* handle user-provided file */
-    if (options->input) {
+    if (options->fname) {
         BITMAPINFOHEADER biHeader;
         unsigned char *bmpData;
         if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
@@ -45,14 +45,17 @@ int run_sad(options_t *options) {
             /* NOTREACHED */
         }
         
+        printf("Filename: %s\n", basename(options->fname));
         print_biHeader(&biHeader);
         
         /* process bmpData */
+        /*
         for (unsigned int i = 0; i < biHeader.biImageSize; i++) {
             printf("%X ", bmpData[i]);
             if (i % (biHeader.biImageSize / 2) == 0) printf("\n");
         }
         printf("\n");
+        */
         
         unsigned char template[] = {
             0, 0, 0,
@@ -67,7 +70,9 @@ int run_sad(options_t *options) {
                                                      // there cannot be overflow of frame data
         int frame_height = frame_width;
         res = c_sad( template, 3, 3, bmpData, frame_width, frame_height );
-        printf("%d\n", res);
+        printf("Result of C_SAD: %d\n", res);
+        printf("sizeof(unsigned char): %ldB\n", sizeof(unsigned char));
+        printf("size of 1 byte (B): %db\n", CHAR_BIT);
         
         free(bmpData);
     }
@@ -146,7 +151,6 @@ int self_test(void) {
      // assert(17 == sad(template, 0, 0, frame, 3, 5));
      int res = 0;
      res = c_sad(template1, 3, 3, frame1, 5, 3);
-     printf("%d\n", res);
      assert(17 == res);
 
 	 return 1;

@@ -2,7 +2,7 @@
 #include "../include/common.h"
 
 #define OPTSTR "vi:o:f:h"
-#define USAGE_FMT  "%s [-v] [-f hexflag] [-i inputfile] [-o outputfile] [-h]\n"
+#define USAGE_FMT  "Usage: %s [-v] [-f hexflag] [-i inputfile] [-o outputfile] [-h]\n"
 
 extern int errno;
 extern char *optarg; /* for use with getopt() */
@@ -12,7 +12,7 @@ static void usage(char *progname, int opt);
 
 int main(int argc, char *argv[]) {
     int opt;
-    options_t options = { 0, 0x0, stdin, stdout };
+    options_t options = { 0, 0x0, NULL, stdin, stdout };
 
     opterr = 0;
 
@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
                  exit(EXIT_FAILURE);
                  /* NOTREACHED */
               }
+              options.fname = optarg;
               break;
 
            case 'o':

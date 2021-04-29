@@ -26,6 +26,7 @@
 typedef struct {
   int           verbose;
   uint32_t      flags;
+  char         *fname;
   FILE         *input;
   FILE         *output;
 } options_t;
