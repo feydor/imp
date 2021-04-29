@@ -13,6 +13,7 @@
 #include <stdint.h> /* for uint32_t, uint64_t */
 #include <time.h> /* for clock(), CLOCKS_PER_SEC */
 #include <math.h> /* for sqrt() */
+#include <sys/time.h>
 
 #define ERR_FOPEN_INPUT  "fopen(input, r)"
 #define ERR_FOPEN_OUTPUT "fopen(output, w)"

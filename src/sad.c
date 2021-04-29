@@ -6,8 +6,9 @@
 int c_sad(unsigned char *template, int template_w, int template_h,
         unsigned char *frame, int frame_w, int frame_h) {
     
-    int results[frame_h * frame_w]; // must be less than this
-    memset(results, 0, frame_h * frame_w * sizeof(int));
+    const int NUM_ITERATIONS = (frame_w - template_w + 1) * (frame_h - template_h + 1);
+    int results[NUM_ITERATIONS];
+    memset(results, 0, NUM_ITERATIONS * sizeof(int));
     
     int itr_count = 0;
     
@@ -52,7 +53,7 @@ int sum(int height, int width, int arr[][width]) {
 int min(int *arr, int len) {
     int min = INT_MAX;
     for (int i = 0; i < len; i++) {
-        if (min > arr[i])
+        if (min > arr[i]) 
             min = arr[i];
     }
     return min;
