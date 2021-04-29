@@ -28,7 +28,7 @@ typedef struct {
     DWORD  biWidth;       /* specifies width in pixels */
     DWORD  biHeight;      /* specifies height in pixels */
     WORD   biPlanes;      /* specifies the number of color planes, must be 1 */
-    WORD   biBitCount;    /* specifies the number of bits per pixel */
+    WORD   biBitPerPxl;   /* specifies the number of bits per pixel */
     DWORD  biCompression; /* specifies the type of compression */
     DWORD  biImageSize;   /* specifies the image size in bytes */
     DWORD  biXPxlsPerMeter; /* specifies the number of pixels per meter, x axis */

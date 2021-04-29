@@ -127,7 +127,7 @@ SAD_LOOP:
     ; call sad
     sad_body
 
-    ; if tunr1, else if turn 2, else if turn 3
+    ; if turn1, else if turn 2, else if turn 3
     ; turn1 = f_y = 0
     ; cmp     r9, 0
     ; je      TURN1_INCREMENT
@@ -211,9 +211,6 @@ TURN4_LOOP:
 	sub		rax, t_height	; f_height - t_height
 	cmp		r13, rax
 	je		PRINT_RESULTS
-	
-	
-	
 	
 	; else, continue
 	jmp		SAD_LOOP

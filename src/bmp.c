@@ -16,8 +16,6 @@ unsigned char *parse_24bit_bmp(FILE *file, BITMAPINFOHEADER *biHeader) {
         return NULL;
     }
     
-    printf("%u\n", bfHeader.bfSize);
-    
     // read the bmp info header
     fread(biHeader, sizeof(BITMAPINFOHEADER), 1, file);
     
@@ -53,15 +51,17 @@ unsigned char *parse_24bit_bmp(FILE *file, BITMAPINFOHEADER *biHeader) {
     return bmpImage;
 }
 
+/*
 unsigned char *parse_32bit_bmp(FILE *file, BITMAPV4HEADER *bv4Header) {
     // parse_bmp(file, (void *) bv4Header);
 }
+*/
 
 void print_biHeader(BITMAPINFOHEADER *biHeader) {
     printf("Printing BITMAPINFOHEADER...\n");
     printf("biSize: %u B\n", biHeader->biSize);
     printf("biWidth: %u px\n", biHeader->biWidth);
     printf("biHeight: %u px\n", biHeader->biHeight);
-    printf("biBitCount: %u b/px\n", biHeader->biBitCount);
+    printf("biBitPerPxl: %u b/px\n", biHeader->biBitPerPxl);
     printf("biImageSize: %u B\n", biHeader->biImageSize);
 }

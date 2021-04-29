@@ -1,6 +1,7 @@
 /* sadx64.c */
 #include "../include/common.h"
 #include "../include/bmp.h"
+#include "../include/sad.h"
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
@@ -45,6 +46,29 @@ int run_sad(options_t *options) {
         }
         
         print_biHeader(&biHeader);
+        
+        /* process bmpData */
+        for (unsigned int i = 0; i < biHeader.biImageSize; i++) {
+            printf("%X ", bmpData[i]);
+            if (i % (biHeader.biImageSize / 2) == 0) printf("\n");
+        }
+        printf("\n");
+        
+        unsigned char template[] = {
+            0, 0, 0,
+            0, 0, 0,
+            0, 0, 0
+        };
+        
+        int res = 0;
+        // res = sad((uint64_t *) template, 0, 0, (uint64_t *) bmpData, 4, 4);
+        
+        int frame_width = sqrt(biHeader.biImageSize); // b/c of rounding down,
+                                                     // there cannot be overflow of frame data
+        int frame_height = frame_width;
+        res = c_sad( template, 3, 3, bmpData, frame_width, frame_height );
+        printf("%d\n", res);
+        
         free(bmpData);
     }
     
@@ -95,6 +119,7 @@ int self_test(void) {
 		7 5 9       8 4 6 8 5	 
 	 */
 	
+    /*
 	 uint64_t frame[] = {
 		2, 7, 5, 8, 6,
 		1, 7, 4, 2, 7,
@@ -105,8 +130,24 @@ int self_test(void) {
 		4, 0, 7,
 		7, 5, 9
 	 };
+     */
      
-     assert(20 == sad(template, 0, 0, frame, 3, 5));
+     unsigned char frame1[] = {
+         2, 7, 5, 8, 6,
+		1, 7, 4, 2, 7,
+		8, 4, 6, 8, 5
+    };
+     unsigned char template1[] = {
+		2, 5, 5,
+		4, 0, 7,
+		7, 5, 9
+	 };
+     
+     // assert(17 == sad(template, 0, 0, frame, 3, 5));
+     int res = 0;
+     res = c_sad(template1, 3, 3, frame1, 5, 3);
+     printf("%d\n", res);
+     assert(17 == res);
 
 	 return 1;
 }

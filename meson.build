@@ -5,6 +5,8 @@ project('sadx64', 'c',
 yasm_src = ['src/sad.s']
 
 yasm = find_program('yasm')
+cc = meson.get_compiler('c')
+math_dep = cc.find_library('m', required : false)
 
 gen = generator(yasm,
   output  : '@BASENAME@.obj',
@@ -12,11 +14,13 @@ gen = generator(yasm,
 
 yasm_objs = gen.process(yasm_src)
 
-src_c = ['src/main.c', 'src/sad-test.c', 'src/bmp.c']
+src_c = ['src/main.c', 'src/sad-test.c', 'src/sad.c', 'src/bmp.c']
 incl_dir = include_directories('include')
+deps = [math_dep]
 
 src_c += yasm_objs
 exe = executable('sadx64',
            sources: src_c,
            include_directories: incl_dir,
+           dependencies: deps,
            install : true)

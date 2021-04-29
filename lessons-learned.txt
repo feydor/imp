@@ -6,5 +6,3 @@ check the CF {carry} or OF (overflow) flags. In this program,
 the maximum possible result of an IMUL instruction fits safely within
 a single byte. Use of this instruction conserved the use of RDX and 
 limited the number of MOV instructions.
-
-2. 
