@@ -12,6 +12,9 @@ int c_sad(unsigned char *template, int template_w, int template_h,
     
     int itr_count = 0;
     
+    // printf("frame_h: %d\nframe_w: %d\n", frame_h, frame_w);
+    // printf("template_h: %d\ntemplate_w: %d\n", template_h, template_w);
+    
     for (int row = 0; row < frame_h; row++) {
         for (int col = 0; col < frame_w; col++) {
             if (col + template_w <= frame_w && row + template_h <= frame_h) {
@@ -31,10 +34,12 @@ int do_sad_calculation(unsigned char *frame, int curr_frame_col, int curr_frame_
     
     // iterate template && frame using the current frame row and col as the limit
     // for frow and fcol
-    int temp[template_h][template_h];
-    for (int row = 0, frow = curr_frame_row; row < template_h; row++, frow++) {
-        for (int col = 0, fcol = curr_frame_col; col < template_w; col++, fcol++) {
-            temp[row][col] = abs(frame[frow * frame_w + fcol] - template[row * template_w + col]);
+    int temp[template_h][template_w];
+    for (int trow = 0, frow = curr_frame_row; trow < template_h; trow++, frow++) {
+        for (int tcol = 0, fcol = curr_frame_col; tcol < template_w; tcol++, fcol++) {
+            temp[trow][tcol] = abs(
+                frame[frow * frame_w + fcol] - template[trow * template_w + tcol]
+            );
         }
     }
     return sum(template_h, template_w, temp);

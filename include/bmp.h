@@ -78,6 +78,7 @@ typedef struct {
 
 /* function prototypes */
 unsigned char *parse_24bit_bmp(FILE *, BITMAPINFOHEADER *);
+int bmp_row_padding(int width_bytes);
 void print_biHeader(BITMAPINFOHEADER *);
 
 #endif

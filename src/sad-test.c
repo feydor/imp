@@ -14,6 +14,8 @@
 // Link this program with an external C or x86-64 compression function
 extern int sad(uint64_t* template, uint64_t starting_row,
 	uint64_t starting_col, uint64_t* frame, uint64_t f_height, uint64_t f_width);
+int handle_bmp(options_t *options);
+void template_dim_from_frame_dim(int frame_w, int frame_h, int *x, int *y);
 static int self_test(void);
 static void run_benchmarks();
 void strtoll_arr(unsigned char* arr, int width, int height);
@@ -41,44 +43,11 @@ int run_sad(options_t *options) {
     
     /* handle user-provided file */
     if (options->fname) {
-        BITMAPINFOHEADER biHeader;
-        unsigned char *bmpData;
-        if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
+        if (!handle_bmp(options)) {
             errno = ENOENT;
             return EXIT_FAILURE;
             /* NOTREACHED */
         }
-        
-        printf("Filename: %s\n", basename(options->fname));
-        print_biHeader(&biHeader);
-        
-        /* process bmpData */
-        /*
-        for (unsigned int i = 0; i < biHeader.biImageSize; i++) {
-            printf("%X ", bmpData[i]);
-            if (i % (biHeader.biImageSize / 2) == 0) printf("\n");
-        }
-        printf("\n");
-        */
-        
-        unsigned char template[] = {
-            0, 0, 0,
-            0, 0, 0,
-            0, 0, 0
-        };
-        
-        int res = 0;
-        // res = sad((uint64_t *) template, 0, 0, (uint64_t *) bmpData, 4, 4);
-        
-        int frame_width = sqrt(biHeader.biImageSize); // b/c of rounding down,
-                                                     // there cannot be overflow of frame data
-        int frame_height = frame_width;
-        res = c_sad( template, 3, 3, bmpData, frame_width, frame_height );
-        printf("Result of C_SAD: %d\n", res);
-        printf("sizeof(unsigned char): %ldB\n", sizeof(unsigned char));
-        printf("size of 1 byte (B): %db\n", CHAR_BIT);
-        
-        free(bmpData);
     }
     
     if (options->verbose) {
@@ -86,6 +55,49 @@ int run_sad(options_t *options) {
     }
 	return EXIT_SUCCESS;
     /* NOTREACHED */
+}
+
+int handle_bmp(options_t *options) {
+    BITMAPINFOHEADER biHeader;
+    unsigned char *bmpData; // must be free'd
+    if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
+        errno = ENOENT;
+        return 0;
+        /* NOTREACHED */
+    }
+    
+    printf("Filename: %s\n", basename(options->fname));
+    print_biHeader(&biHeader);
+    
+    // calculate frame height and width
+    int w_bytes = biHeader.biWidth * biHeader.biBitPerPxl / 8;
+    int frame_width = w_bytes + bmp_row_padding(w_bytes);
+    int frame_height = biHeader.biHeight;
+    printf("frame_width: %d\nframe_height: %d\n", frame_width, frame_height);
+    
+    // find a square template that fits the frame 
+    // TODO: Let the user choose the template
+    int template_w, template_h;
+    template_dim_from_frame_dim(frame_width, frame_height, &template_w, &template_h);
+    
+    unsigned char template[template_w * template_h];
+    memset(template, 0, template_w * template_h * sizeof(unsigned char));
+    
+    // start algorithms
+    int res = 0;
+    // res = sad((uint64_t *) template, 0, 0, (uint64_t *) bmpData, 4, 4);
+    
+    res = c_sad( template, template_w, template_h, bmpData, frame_width, frame_height );
+    printf("Result of C_SAD: %d\n", res);
+    
+    free(bmpData);
+    return 1;
+}
+
+/* Finds a square template that fits the given frame dimensions */
+void template_dim_from_frame_dim(int frame_w, int frame_h, int *x, int *y) {
+    *x = frame_w / 2;
+    *y = frame_h / 2;
 }
 
 void run_benchmarks() {

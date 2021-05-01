@@ -57,6 +57,15 @@ unsigned char *parse_32bit_bmp(FILE *file, BITMAPV4HEADER *bv4Header) {
 }
 */
 
+/**
+ * gets the number of bytes added to a bmp row to make it a multiple of 4
+ */
+int bmp_row_padding(int row_bytes) {
+    return row_bytes % 4 == 0
+           ? 0
+           : abs((row_bytes % 4) - 4);
+}
+
 void print_biHeader(BITMAPINFOHEADER *biHeader) {
     printf("Printing BITMAPINFOHEADER...\n");
     printf("biSize: %u B\n", biHeader->biSize);
