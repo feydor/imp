@@ -1,2 +1,11 @@
 bin/
 build/
+
+# build artifacts
+*.rct 
+*.rc
+*.aps
+*.obj
+*.sln
+*.suo
+*.exe
