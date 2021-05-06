@@ -3,17 +3,24 @@
 #define COMMON_H
 
 #include <assert.h> /* for assert */
-#include <libgen.h> /* for basename() */
 #include <stdio.h> /* for FILE, fprint, fread, stdin, stdout, stderr */
 #include <stdlib.h> /* for malloc, realloc */
-#include <unistd.h> /* for EXIT_FAILURE, EXIT_SUCCESS */
+#ifdef _MSC_VER
+	#include <io.h>
+	typedef __int16 int16_t;
+	typedef unsigned __int16 uint16_t;
+	typedef __int32 int32_t;
+	typedef unsigned __int32 uint32_t;
+	typedef __int64 int64_t;
+	typedef unsigned __int64 uint64_t;
+#else
+	#include <unistd.h> /* for EXIT_FAILURE, EXIT_SUCCESS */
+	#include <stdint.h> /* for uint32_t, uint64_t */
+#endif
 #include <errno.h> /* for external errno variable */
 #include <string.h> /* for memcpy, memset, strlen */
-#include <getopt.h> /* for external optarg, opterr, optind, getopt() */
-#include <stdint.h> /* for uint32_t, uint64_t */
 #include <time.h> /* for clock(), CLOCKS_PER_SEC */
 #include <math.h> /* for sqrt() */
-#include <sys/time.h>
 
 #define ERR_FOPEN_INPUT  "fopen(input, r)"
 #define ERR_FOPEN_OUTPUT "fopen(output, w)"

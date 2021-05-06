@@ -1,6 +1,7 @@
-#ifndef MENU_H
-#define MENU_H
+#ifndef DEFINITIONS_H
+#define DEFINITIONS_H
 
+/* IDs for calling controls in WIN32 messages */
 #define ID_FILE_OPEN    9000
 #define ID_FILE_EXIT    9001
 #define ID_STUFF_GO     9002

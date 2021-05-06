@@ -13,7 +13,7 @@ typedef struct {
     uint16_t  reserved1;    /* reserved, must be 0 */
     uint16_t  reserved2;    /* reserved, must be 0 */
     uint32_t  offset;       /* specifies the offset in bytes from header to data */
-} BitmapFileHeader;
+} BMPFileHeader;
 #pragma pack(pop)
 
 // for use with 24bit bitmap with pixel format RGB24
@@ -30,9 +30,9 @@ typedef struct {
     uint32_t  YPxlsPerMeter; /* specifies the number of pixels per meter, y axis */
     uint32_t  colorsUsed;      /* number of colors used */
     uint32_t  colorsImportant; /* number of colors that are important */
-} BitmapInfoHeader;
+} BMPInfoHeader;
 
-#pragma pack(push, 1)
+/*
 // for use with 32bit bitmap with pixel format ARGB32
 // Size: 96 Bytes
 typedef struct {
@@ -68,11 +68,13 @@ typedef struct {
     uint32_t  bV4GammaGreen;
     uint32_t  bV4GammaBlue;
 } BitmapV4Header;
-#pragma pack(pop)
+*/
 
 /* function prototypes */
-unsigned char *parse_24bit_bmp(FILE *, BitmapInfoHeader *);
+unsigned char *parse_24bit_bmp(FILE *f, BMPInfoHeader *new_biHeader);
+unsigned char *parse_24bit_bmp_filename(char *fname, BMPInfoHeader *new_biHeader);
+unsigned char *invert_24bit_bmp(unsigned char *bmp, BMPInfoHeader *biHeader);
 int bmp_row_padding(int width_bytes);
-void print_biHeader(BitmapInfoHeader *);
+void print_biHeader(BMPInfoHeader *biHeader);
 
 #endif

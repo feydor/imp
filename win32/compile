@@ -1,0 +1,9 @@
+# set options in MSVC command prompt
+SET CL=/EHsc /GR /FI"iso646.h" /Zc:strictStrings /we4627 /we4927 /wd4351 /W4 /D"_CRT_SECURE_NO_WARNINGS" /nologo
+SET LINK=/entry:mainCRTStartup /nologo
+
+# to compile the resources
+rc /v /r res1.rc
+
+# to compile the sources (in root of project directory)
+cl src/main.c src/control.c src/fileio.c ../src/bmp.c /I include /Fe"bmp-win32" /link /subsystem:windows user32.lib comdlg32.lib gdi32.lib comctl32.lib res/res1.RES /MACHINE:X86

@@ -1,5 +1,7 @@
 /* main.c */
 #include "../include/common.h"
+#include <libgen.h> /* for basename() */
+#include <getopt.h> /* for external optarg, opterr, optind, getopt() */
 
 #define OPTSTR "vi:o:f:h"
 #define USAGE_FMT  "Usage: %s [-v] [-f hexflag] [-i inputfile] [-o outputfile] [-h]\n"

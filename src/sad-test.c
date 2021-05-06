@@ -5,6 +5,8 @@
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <sys/time.h>
+#include <libgen.h> /* for basename() */
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
@@ -58,7 +60,7 @@ int run_sad(options_t *options) {
 }
 
 int handle_bmp(options_t *options) {
-    BitmapInfoHeader biHeader;
+    BMPInfoHeader biHeader;
     unsigned char *bmpData; // must be free'd
     if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
         errno = ENOENT;
