@@ -6,79 +6,73 @@
 #ifndef BMP_H
 #define BMP_H
 
-typedef uint64_t LONG;    // LONG = unsigned 64 bit value
-typedef uint32_t DWORD;   // DWORD = unsigned 32 bit value
-typedef uint16_t WORD;    // WORD = unsigned 16 bit value
-typedef uint8_t  BYTE;    // BYTE = unsigned 8 bit value
-
 #pragma pack(push, 1) // WORD should be 2B
 typedef struct {
-    WORD  bfType;        /* specifies the filetype, 0x424D specifies BMP */
-    DWORD bfSize;        /* specifies the total size in bytes, header + data */
-    WORD  bfReserved1;   /* reserved, must be 0 */
-    WORD  bfReserved2;   /* reserved, must be 0 */
-    DWORD bfOffset;      /* specifies the offset in bytes from header to data */
-} BITMAPFILEHEADER;
+    uint16_t  ftype;        /* specifies the filetype, 0x424D specifies BMP */
+    uint32_t  fsize;        /* specifies the total size in bytes, header + data */
+    uint16_t  reserved1;    /* reserved, must be 0 */
+    uint16_t  reserved2;    /* reserved, must be 0 */
+    uint32_t  offset;       /* specifies the offset in bytes from header to data */
+} BitmapFileHeader;
 #pragma pack(pop)
 
-#pragma pack(push, 1)
 // for use with 24bit bitmap with pixel format RGB24
+// size: 36 bytes
 typedef struct {
-    DWORD  biSize;        /* specifies the size of the info header in bytes */
-    DWORD  biWidth;       /* specifies width in pixels */
-    DWORD  biHeight;      /* specifies height in pixels */
-    WORD   biPlanes;      /* specifies the number of color planes, must be 1 */
-    WORD   biBitPerPxl;   /* specifies the number of bits per pixel */
-    DWORD  biCompression; /* specifies the type of compression */
-    DWORD  biImageSize;   /* specifies the image size in bytes */
-    DWORD  biXPxlsPerMeter; /* specifies the number of pixels per meter, x axis */
-    DWORD  biYPxlsPerMeter; /* specifies the number of pixels per meter, y axis */
-    DWORD  biClrsUsed;      /* number of colors used */
-    DWORD  biClrsImportant; /* number of colors that are important */
-} BITMAPINFOHEADER;
-#pragma pack(pop)
+    uint32_t  size;        /* specifies the size of the info header in bytes */
+    uint32_t  imageWidth;       /* specifies width in pixels */
+    uint32_t  imageHeight;      /* specifies height in pixels */
+    uint16_t  planes;      /* specifies the number of color planes, must be 1 */
+    uint16_t  bitsPerPxl;   /* specifies the number of bits per pixel */
+    uint32_t  compressionType; /* specifies the type of compression */
+    uint32_t  imageSize;   /* specifies the image size in bytes */
+    uint32_t  XpxlsPerMeter; /* specifies the number of pixels per meter, x axis */
+    uint32_t  YPxlsPerMeter; /* specifies the number of pixels per meter, y axis */
+    uint32_t  colorsUsed;      /* number of colors used */
+    uint32_t  colorsImportant; /* number of colors that are important */
+} BitmapInfoHeader;
 
 #pragma pack(push, 1)
 // for use with 32bit bitmap with pixel format ARGB32
 // Size: 96 Bytes
 typedef struct {
-    DWORD  bV4Size;
-    DWORD  bV4Width;
-    DWORD  bV4Height;
-    WORD   bV4Planes;
-    WORD   bV4BitCount;
-    DWORD  bV4V4Compression;
-    DWORD  bV4ImageSizw;
-    DWORD  bV4XPxlsPerMeter;
-    DWORD  bV4YPxlsPerMeter;
-    DWORD  bV4ClrsUsed;
-    DWORD  bV4ClrsImportant;
-    DWORD  bV4RedMask;
-    DWORD  bV4GreenMask;
-    DWORD  bV4BlueMask;
-    DWORD  bV4AlphaMask;
-    DWORD  bV4CSType; // 60
+    uint32_t  bV4Size;
+    uint32_t  bV4Width;
+    uint32_t  bV4Height;
+    uint16_t   bV4Planes;
+    uint16_t   bV4BitCount;
+    uint32_t  bV4V4Compression;
+    uint32_t  bV4ImageSizw;
+    uint32_t  bV4XPxlsPerMeter;
+    uint32_t  bV4YPxlsPerMeter;
+    uint32_t  bV4ClrsUsed;
+    uint32_t  bV4ClrsImportant;
+    uint32_t  bV4RedMask;
+    uint32_t  bV4GreenMask;
+    uint32_t  bV4BlueMask;
+    uint32_t  bV4AlphaMask;
+    uint32_t  bV4CSType; // 60
     
     // bV4Endpoints, 12B
-    DWORD  bV4RedX;
-    DWORD  bV4RedY;
-    DWORD  bV4RedZ;
-    DWORD  bV4GreenX;
-    DWORD  bV4GreenY;
-    DWORD  bV4GreenZ;
-    DWORD  bV4BlueX;
-    DWORD  bV4BlueY;
-    DWORD  bV4BlueZ;
+    uint32_t  bV4RedX;
+    uint32_t  bV4RedY;
+    uint32_t  bV4RedZ;
+    uint32_t  bV4GreenX;
+    uint32_t  bV4GreenY;
+    uint32_t  bV4GreenZ;
+    uint32_t  bV4BlueX;
+    uint32_t  bV4BlueY;
+    uint32_t  bV4BlueZ;
     
-    DWORD  bV4GammaRed;
-    DWORD  bV4GammaGreen;
-    DWORD  bV4GammaBlue;
-} BITMAPV4HEADER;
+    uint32_t  bV4GammaRed;
+    uint32_t  bV4GammaGreen;
+    uint32_t  bV4GammaBlue;
+} BitmapV4Header;
 #pragma pack(pop)
 
 /* function prototypes */
-unsigned char *parse_24bit_bmp(FILE *, BITMAPINFOHEADER *);
+unsigned char *parse_24bit_bmp(FILE *, BitmapInfoHeader *);
 int bmp_row_padding(int width_bytes);
-void print_biHeader(BITMAPINFOHEADER *);
+void print_biHeader(BitmapInfoHeader *);
 
 #endif

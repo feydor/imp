@@ -58,7 +58,7 @@ int run_sad(options_t *options) {
 }
 
 int handle_bmp(options_t *options) {
-    BITMAPINFOHEADER biHeader;
+    BitmapInfoHeader biHeader;
     unsigned char *bmpData; // must be free'd
     if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
         errno = ENOENT;
@@ -70,9 +70,9 @@ int handle_bmp(options_t *options) {
     print_biHeader(&biHeader);
     
     // calculate frame height and width
-    int w_bytes = biHeader.biWidth * biHeader.biBitPerPxl / 8;
+    int w_bytes = biHeader.imageWidth * biHeader.bitsPerPxl / 8;
     int frame_width = w_bytes + bmp_row_padding(w_bytes);
-    int frame_height = biHeader.biHeight;
+    int frame_height = biHeader.imageHeight;
     printf("frame_width: %d\nframe_height: %d\n", frame_width, frame_height);
     
     // find a square template that fits the frame 
