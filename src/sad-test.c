@@ -81,9 +81,14 @@ int handle_bmp(options_t *options) {
     // TODO: Let the user choose the template
     int template_w, template_h;
     template_dim_from_frame_dim(frame_width, frame_height, &template_w, &template_h);
-    
-    unsigned char template[template_w * template_h];
+    unsigned char template_buffer[template_w * template_h];
     memset(template, 0, template_w * template_h * sizeof(unsigned char));
+    
+    // create and assign UCharBuffer structs for template and frame
+    UCharBuffer *template;
+    UCharBuffer *frame;
+    template = create_UCharBuffer(template_width, template_height);
+    frame = create_UCharBuffer_from_uchar(bmpData, frame_width, frame_height);
     
     // start algorithms
     int res = 0;

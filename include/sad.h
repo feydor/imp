@@ -5,19 +5,19 @@
 #include <limits.h>
 
 typedef struct {
-    void **arr;
-    unsigned int width;
-    unsigned int height;
-} Buffer2D;
+  unsigned char *buffer;
+  unsigned int   width;
+  unsigned int   height;
+  unsigned int   col;
+  unsigned int   row;
+} UCharBuffer;
 
-int c_sad(unsigned char *, int , int ,
-         unsigned char *, int , int );
-int do_sad_calculation(unsigned char *, int , int , int,
-                        unsigned char *, int , int );
-int min(int *arr, int len);
-int min_vla(int height, int width, int arr[][width]);
-int sum(int height, int width, int arr[][width]);
-void print_arr(int *arr, int len);
-void print_arr_vla(int height, int width, int arr[][width]);
+/* interface */
+int c_sad(UCharBuffer *template, UCharBuffer *frame);
+UCharBuffer *create_UCharBuffer(unsigned int width, unsigned int height);
+UCharBuffer *create_UCharBuffer_from_uchar(unsigned char *buff, unsigned int width, unsigned int height);
+void destroy_UCharBuffer(UCharBuffer *b) {
+
+static bool are_empty(unsigned char *buf1, unsigned char *buf2);
 
 #endif
