@@ -17,10 +17,9 @@
 extern int sad(uint64_t* template, uint64_t starting_row,
 	uint64_t starting_col, uint64_t* frame, uint64_t f_height, uint64_t f_width);
 int handle_bmp(options_t *options);
-void template_dim_from_frame_dim(int frame_w, int frame_h, int *x, int *y);
+static void template_dim_from_frame_dim(unsigned int frame_w, unsigned int frame_h, unsigned int *x, unsigned int *y);
 static int self_test(void);
 static void run_benchmarks();
-void strtoll_arr(unsigned char* arr, int width, int height);
 
 int run_sad(options_t *options) {
     if (!options) {
@@ -72,17 +71,16 @@ int handle_bmp(options_t *options) {
     print_biHeader(&biHeader);
     
     // calculate frame height and width
-    int w_bytes = biHeader.imageWidth * biHeader.bitsPerPxl / 8;
-    int frame_width = w_bytes + bmp_row_padding(w_bytes);
-    int frame_height = biHeader.imageHeight;
+    // TODO: is frame_height in pixels or bytes? check biHeader.bitsPerPixel
+    unsigned int frame_width = image_width_bytes(&biHeader) + bmp_row_padding(image_width_bytes(&biHeader));
+    unsigned int frame_height = biHeader.imageHeight;
     printf("frame_width: %d\nframe_height: %d\n", frame_width, frame_height);
     
     // find a square template that fits the frame 
     // TODO: Let the user choose the template
-    int template_w, template_h;
-    template_dim_from_frame_dim(frame_width, frame_height, &template_w, &template_h);
-    unsigned char template_buffer[template_w * template_h];
-    memset(template, 0, template_w * template_h * sizeof(unsigned char));
+    unsigned int template_width, template_height;
+    template_dim_from_frame_dim(frame_width, frame_height, &template_width, &template_height);
+    printf("template_width: %d\ntemplate_height: %d\n", template_width, template_height);
     
     // create and assign UCharBuffer structs for template and frame
     UCharBuffer *template;
@@ -94,38 +92,48 @@ int handle_bmp(options_t *options) {
     int res = 0;
     // res = sad((uint64_t *) template, 0, 0, (uint64_t *) bmpData, 4, 4);
     
-    res = c_sad( template, template_w, template_h, bmpData, frame_width, frame_height );
+    res = c_sad( template, frame );
     printf("Result of C_SAD: %d\n", res);
     
-    free(bmpData);
+    //free(bmpData);
+    destroy_UCharBuffer(template);
+    destroy_UCharBuffer(frame);
     return 1;
 }
 
 /* Finds a square template that fits the given frame dimensions */
-void template_dim_from_frame_dim(int frame_w, int frame_h, int *x, int *y) {
+static void 
+template_dim_from_frame_dim(unsigned int frame_w, unsigned int frame_h,
+        unsigned int *x, unsigned int *y)
+{
     *x = frame_w / 2;
     *y = frame_h / 2;
 }
 
-void run_benchmarks() {
+static void
+run_benchmarks() 
+{
     const long TRIALS = 1000;
     struct timeval stop, start, stop1, start1;
 	
 	uint64_t frame [FRAME_HEIGHT * FRAME_WIDTH];
 	uint64_t template [3 * 3];
-    unsigned char frame_uchar [FRAME_HEIGHT * FRAME_WIDTH];
-	unsigned char template_uchar [3 * 3];
+    UCharBuffer *tb;
+    UCharBuffer *fb;
+    tb = create_UCharBuffer(3, 3);
+    fb = create_UCharBuffer(FRAME_WIDTH, FRAME_HEIGHT);
 	
 	// fill both frame and template with random bytes
 	memcpy(frame, (void*) memcpy, FRAME_HEIGHT * FRAME_WIDTH * sizeof(uint64_t));
 	memcpy(template, (void*) memcpy, 3 * 3 * sizeof(uint64_t));
-    memcpy(frame_uchar, (void*) memcpy, FRAME_HEIGHT * FRAME_WIDTH * sizeof(unsigned char));
-	memcpy(template_uchar, (void*) memcpy, 3 * 3 * sizeof(unsigned char));
+    memcpy(fb->buffer, (void*) memcpy, fb->size);
+	memcpy(tb->buffer, (void*) memcpy, tb->size);
 	
     printf("Printing frame...\n");
+    unsigned char *fbp = fb->buffer;
 	for (int i = 0; i < FRAME_HEIGHT * FRAME_WIDTH; ++i) {
 		// printf("%li, ", frame[i]);
-        printf("%u ", frame_uchar[i]);
+        printf("%u ", *(++fbp));
 	}
 	printf("\n");
 	
@@ -137,7 +145,7 @@ void run_benchmarks() {
 	
 	gettimeofday(&start1, NULL);
     for (long i = 0; i < TRIALS; i++) {
-        c_sad(template_uchar, 3, 3, frame_uchar, FRAME_WIDTH, FRAME_HEIGHT);
+        c_sad(tb, fb);
     }
    gettimeofday(&stop1, NULL);
 	
@@ -176,39 +184,31 @@ int self_test(void) {
 		4, 0, 7,
 		7, 5, 9
 	 };
+     // assert(17 == sad(template, 0, 0, frame, 3, 5));
      */
     
-     unsigned char frame[] = {
+     unsigned char fb[] = {
          2, 7, 5, 8, 6,
 		1, 7, 4, 2, 7,
 		8, 4, 6, 8, 5
     };
-     unsigned char template[] = {
+     unsigned char tb[] = {
 		2, 5, 5,
 		4, 0, 7,
 		7, 5, 9
 	 };
 
-     // assert(17 == sad(template, 0, 0, frame, 3, 5));
+     // run c_sad
+     UCharBuffer *template;
+     UCharBuffer *frame;
+     template = create_UCharBuffer_from_uchar(tb, 3, 3);
+     frame = create_UCharBuffer_from_uchar(fb, 5, 3); 
+
      int res = 0;
-     res = c_sad(template, 3, 3, frame, 5, 3);
+     res = c_sad(template, frame);
      assert(17 == res);
-     
-     /*
-     strtoll_arr(frame, 5, 3);
-     strtoll_arr(template, 3, 3);
-     printf("%lu %lu\n", frame[0], frame[1]);
-     
-     res = sad((uint64_t *)template1, 0, 0, (uint64_t*)frame1, 3, 5);
-     printf("%d\n", res);
-     */
+     // TODO: Assert frame->row = ?? and frame->col = ??, results location
 
 	 return 1;
-}
-
-void strtoll_arr(unsigned char* arr, int width, int height) {
-    for (int i = 0; i < width * height; i++) {
-        arr[i] = (uint64_t) arr[i];
-    }
 }
 

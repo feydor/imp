@@ -74,7 +74,8 @@ typedef struct {
 unsigned char *parse_24bit_bmp(FILE *f, BMPInfoHeader *new_biHeader);
 unsigned char *parse_24bit_bmp_filename(char *fname, BMPInfoHeader *new_biHeader);
 unsigned char *invert_24bit_bmp(unsigned char *bmp, BMPInfoHeader *biHeader);
-int bmp_row_padding(int width_bytes);
+unsigned int bmp_row_padding(unsigned int row_bytes); 
+unsigned int image_width_bytes(BMPInfoHeader *biHeader);
 void print_biHeader(BMPInfoHeader *biHeader);
 
 #endif

@@ -82,13 +82,23 @@ unsigned char *invert_24bit_bmp(unsigned char *bmp, BMPInfoHeader *biHeader)
 }
 
 /**
- * gets the number of bytes added to a bmp row to make it a multiple of 4
+ * returns the number of bytes added to a bmp row to make it a multiple of 4
  */
-int bmp_row_padding(int row_bytes) 
+unsigned int 
+bmp_row_padding(unsigned int row_bytes) 
 {
     return row_bytes % 4 == 0
            ? 0
            : abs((row_bytes % 4) - 4);
+}
+
+/**
+ * returns the image width in bytes
+ */
+unsigned int
+image_width_bytes(BMPInfoHeader *biHeader)
+{
+  return biHeader->imageWidth * biHeader->bitsPerPxl / 8;
 }
 
 void print_biHeader(BMPInfoHeader *biHeader) 

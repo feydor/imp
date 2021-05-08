@@ -10,18 +10,18 @@ typedef struct {
 }Result;
 
 /* static function prototypes */
-static int do_sad_calculation(unsigned char *, int , int , int,
-                        unsigned char *, int , int );
+static int do_sad_calculation(UCharBuffer *frame, UCharBuffer *template);
 static bool are_empty(unsigned char *buf1, unsigned char *buf2);
-static bool is_square_matrix(UCharBuffer *matrix) {
-static bool template_fits_frame(UCharBuffer *template, UCharBuffer *frame) {
-static bool bijection(UCharBuffer *template, UCharBuffer *frame) {
-static int min(int *arr, int len);
+static bool template_fits_frame(UCharBuffer *template, UCharBuffer *frame);
+static bool bijection(UCharBuffer *template, UCharBuffer *frame);
 static int min_sad_index(Result *results, int len);
+static int sum(unsigned int height, unsigned int width, int arr[][width]);
+/*
+static int min(int *arr, int len);
 static int min_vla(int height, int width, int arr[][width]);
-static int sum(int height, int width, int arr[][width]);
 static void print_arr(int *arr, int len);
 static void print_arr_vla(int height, int width, int arr[][width]);
+*/
 
 /**
  * function: c_sad, calculates the sum of absolute differences (SAD)
@@ -37,9 +37,9 @@ static void print_arr_vla(int height, int width, int arr[][width]);
 int 
 c_sad(UCharBuffer *template, UCharBuffer *frame) {
   if (are_empty(template->buffer, frame->buffer) || 
-      !is_square_matrix(template) || 
-      !template_fits_frame(template, frame))
+      !template_fits_frame(template, frame)) {
     return INT_MIN;
+  }
 
   const int NUM_ITERATIONS = (frame->width - template->width + 1) *
     (frame->height - template->height + 1);
@@ -56,11 +56,10 @@ c_sad(UCharBuffer *template, UCharBuffer *frame) {
     for (frame->col = 0; frame->col < frame->width; frame->col++) {
       if (bijection(template, frame)) {
         Result res;
-        res->frow = frame->row;
-        res->fcol = frame->col;
-        res->sad = do_sad_calculation(frame, template);
-        res_count++;
-        results[res_count - 1] = res;
+        res.frow = frame->row;
+        res.fcol = frame->col;
+        res.sad = do_sad_calculation(frame, template);
+        results[res_count++] = res;
       }
     }
   }
@@ -68,7 +67,7 @@ c_sad(UCharBuffer *template, UCharBuffer *frame) {
   // print_arr(results, res_count);
 
   /* find the minimum sad and its corresponding row and col */
-  int min_index = min_results_index(results, res_count);
+  int min_index = min_sad_index(results, res_count);
   Result min_sad_result = results[min_index]; 
 
   /* set row and col results into frame struct */
@@ -93,6 +92,7 @@ UCharBuffer *create_UCharBuffer(unsigned int width, unsigned int height) {
     b->width = width;
     b->height = height;
     b->col = b->row = 0;
+    b->size = width * height;
   }
   return b;
 }
@@ -109,6 +109,7 @@ UCharBuffer *create_UCharBuffer_from_uchar(unsigned char *buff, unsigned int wid
     b->width = width;
     b->height = height;
     b->col = b->row = 0;
+    b->size = width * height;
   }
   return b;
 }
@@ -121,6 +122,16 @@ void destroy_UCharBuffer(UCharBuffer *b) {
   }
 }
 
+void 
+print_UCharBuffer(UCharBuffer *b) 
+{
+  if (!b->buffer) return;
+  unsigned char *bp = b->buffer;
+  for (unsigned int i = 0; i < b->size; i++) {
+    printf("%u ", *(bp++));
+  }
+}
+
 static int 
 do_sad_calculation(UCharBuffer *frame, UCharBuffer *template) {
   // iterate template and the "overlapped" portion of the frame
@@ -128,7 +139,7 @@ do_sad_calculation(UCharBuffer *frame, UCharBuffer *template) {
   for (unsigned int trow = 0, frow = frame->row; trow < template->height; trow++, frow++) {
     for (unsigned int tcol = 0, fcol = frame->col; tcol < template->width; tcol++, fcol++) {
       temp[trow][tcol] = abs(
-          frame->bytes[frow * frame->width + fcol] - template->bytes[trow * template->width + tcol]
+          frame->buffer[frow * frame->width + fcol] - template->buffer[trow * template->width + tcol]
           );
     }
   }
@@ -139,11 +150,6 @@ do_sad_calculation(UCharBuffer *frame, UCharBuffer *template) {
 static bool 
 are_empty(unsigned char *buf1, unsigned char *buf2) {
   return !buf1 || !buf2;
-}
-
-static bool 
-is_square_matrix(UCharBuffer *matrix) {
-  return matrix->width == matrix->height;
 }
 
 /**
@@ -168,8 +174,8 @@ bijection(UCharBuffer *template, UCharBuffer *frame) {
 static int 
 sum(unsigned int height, unsigned int width, int arr[][width]) {
   int sum = 0;
-  for (int row = 0; row < height; row++) {
-    for (int col = 0; col < width; col++) {
+  for (unsigned int row = 0; row < height; row++) {
+    for (unsigned int col = 0; col < width; col++) {
       sum += arr[row][col];
     }
   }
@@ -193,6 +199,7 @@ min_sad_index(Result *results, int len) {
   return min_index;
 }
 
+/*
 static int 
 min(int *arr, int len) {
   int min = INT_MAX;
@@ -233,4 +240,4 @@ print_arr_vla(int height, int width, int arr[][width]) {
     }
   }
 }
-
+*/

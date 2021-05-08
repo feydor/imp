@@ -21,6 +21,7 @@
 #include <string.h> /* for memcpy, memset, strlen */
 #include <time.h> /* for clock(), CLOCKS_PER_SEC */
 #include <math.h> /* for sqrt() */
+#include <stdbool.h> /* for bool type */
 
 #define ERR_FOPEN_INPUT  "fopen(input, r)"
 #define ERR_FOPEN_OUTPUT "fopen(output, w)"
