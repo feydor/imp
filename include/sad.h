@@ -4,20 +4,17 @@
 
 #include <limits.h>
 
+/* forward declaration */
+struct saru_bytemat;
+
+/* internal struct to hold temporary results */
 typedef struct {
-  unsigned char *buffer;
-  unsigned int   width;
-  unsigned int   height;
-  unsigned int   col;
-  unsigned int   row;
-  unsigned int   size;
-} UCharBuffer;
+  int sad;
+  unsigned int frow;
+  unsigned int fcol;
+}Result;
 
 /* interface */
-int c_sad(UCharBuffer *template, UCharBuffer *frame);
-UCharBuffer *create_UCharBuffer(unsigned int width, unsigned int height);
-UCharBuffer *create_UCharBuffer_from_uchar(unsigned char *buff, unsigned int width, unsigned int height);
-void destroy_UCharBuffer(UCharBuffer *b);
-void print_UCharBuffer(UCharBuffer *b);
+int c_sad(struct saru_bytemat *template, struct saru_bytemat *frame);
 
 #endif

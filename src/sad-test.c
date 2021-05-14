@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include <libgen.h> /* for basename() */
+#include "saru-bytebuf.h"
 
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
@@ -82,11 +83,9 @@ int handle_bmp(options_t *options) {
     template_dim_from_frame_dim(frame_width, frame_height, &template_width, &template_height);
     printf("template_width: %d\ntemplate_height: %d\n", template_width, template_height);
     
-    // create and assign UCharBuffer structs for template and frame
-    UCharBuffer *template;
-    UCharBuffer *frame;
-    template = create_UCharBuffer(template_width, template_height);
-    frame = create_UCharBuffer_from_uchar(bmpData, frame_width, frame_height);
+    // create and assign saru_bytemat structs for template and frame
+    SBM_CREATE(template, template_width, template_height);
+    SBM_WRAP(frame, bmpData, frame_width, frame_height);
     
     // start algorithms
     int res = 0;
@@ -95,9 +94,8 @@ int handle_bmp(options_t *options) {
     res = c_sad( template, frame );
     printf("Result of C_SAD: %d\n", res);
     
-    //free(bmpData);
-    destroy_UCharBuffer(template);
-    destroy_UCharBuffer(frame);
+    sbm_destroy(template);
+    sbm_destroy(frame);
     return 1;
 }
 
@@ -118,19 +116,18 @@ run_benchmarks()
 	
 	uint64_t frame [FRAME_HEIGHT * FRAME_WIDTH];
 	uint64_t template [3 * 3];
-    UCharBuffer *tb;
-    UCharBuffer *fb;
-    tb = create_UCharBuffer(3, 3);
-    fb = create_UCharBuffer(FRAME_WIDTH, FRAME_HEIGHT);
+
+    SBM_CREATE(fb, FRAME_WIDTH, FRAME_HEIGHT);
+    SBM_CREATE(tb, 3, 3);
 	
 	// fill both frame and template with random bytes
 	memcpy(frame, (void*) memcpy, FRAME_HEIGHT * FRAME_WIDTH * sizeof(uint64_t));
 	memcpy(template, (void*) memcpy, 3 * 3 * sizeof(uint64_t));
-    memcpy(fb->buffer, (void*) memcpy, fb->size);
-	memcpy(tb->buffer, (void*) memcpy, tb->size);
+    memcpy(fb->buf, (void*) memcpy, fb->len);
+	memcpy(tb->buf, (void*) memcpy, tb->len);
 	
     printf("Printing frame...\n");
-    unsigned char *fbp = fb->buffer;
+    unsigned char *fbp = fb->buf;
 	for (int i = 0; i < FRAME_HEIGHT * FRAME_WIDTH; ++i) {
 		// printf("%li, ", frame[i]);
         printf("%u ", *(++fbp));
@@ -158,10 +155,8 @@ run_benchmarks()
      printf("Time (uS)  : %lu us\n", (stop1.tv_sec - start1.tv_sec) * 1000000 + stop1.tv_usec - start1.tv_usec );
      printf("Speed (C)  : %.1f MB/s\n", (double)(FRAME_HEIGHT * FRAME_WIDTH) * TRIALS / (stop1.tv_usec - start.tv_usec) * CLOCKS_PER_SEC / 1000000);
 	
-	//~ start = clock();
-	//~ for (long i = 0; i < TRIALS; i++)
-		//~ rc4_encrypt_x86(&state, msg, MSG_LEN);
-	//~ printf("Speed (x86): %.1f MB/s\n", (double)MSG_LEN * TRIALS / (clock() - start) * CLOCKS_PER_SEC / 1000000);
+    sbm_destroy(fb);
+    sbm_destroy(tb);
 }
 
 int self_test(void) {
@@ -199,15 +194,16 @@ int self_test(void) {
 	 };
 
      // run c_sad
-     UCharBuffer *template;
-     UCharBuffer *frame;
-     template = create_UCharBuffer_from_uchar(tb, 3, 3);
-     frame = create_UCharBuffer_from_uchar(fb, 5, 3); 
+     SBM_WRAP(template, tb, 3, 3);
+     SBM_WRAP(frame, fb, 5, 3);
 
      int res = 0;
      res = c_sad(template, frame);
      assert(17 == res);
      // TODO: Assert frame->row = ?? and frame->col = ??, results location
+
+     free(template);
+     free(frame);
 
 	 return 1;
 }
