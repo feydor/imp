@@ -1,10 +1,13 @@
-/* main.c */
-#include "../include/common.h"
+/* main.c - the program's UNIX interface */
 #include <libgen.h> /* for basename() */
 #include <getopt.h> /* for external optarg, opterr, optind, getopt() */
-
-#define OPTSTR "vi:o:f:h"
-#define USAGE_FMT  "Usage: %s [-v] [-f hexflag] [-i inputfile] [-o outputfile] [-h]\n"
+#include <stdio.h> /* for FILE, fprint, fread, stdin, stdout, stderr */
+#include <stdlib.h> /* for malloc, realloc */
+#include <errno.h> /* for external errno variable */
+#include <string.h> /* for memcpy, memset, strlen */
+#include <math.h> /* for sqrt() */
+#include "../include/main.h"
+#include "../include/imagehandler.h"
 
 extern int errno;
 extern char *optarg; /* for use with getopt() */
@@ -21,20 +24,11 @@ int main(int argc, char *argv[]) {
     while ((opt = getopt(argc, argv, OPTSTR)) != EOF)
        switch(opt) {
            case 'i':
-              if (!(options.input = fopen(optarg, "rb")) ){
-                 perror(ERR_FOPEN_INPUT);
-                 exit(EXIT_FAILURE);
-                 /* NOTREACHED */
-              }
               options.fname = optarg;
               break;
 
            case 'o':
-              if (!(options.output = fopen(optarg, "w")) ){
-                 perror(ERR_FOPEN_OUTPUT);
-                 exit(EXIT_FAILURE);
-                 /* NOTREACHED */
-              }    
+              options.oname = optarg;
               break;
              
            case 'f':
@@ -51,11 +45,12 @@ int main(int argc, char *argv[]) {
               /* NOTREACHED */
               break;
        }
-
-    if (run_sad(&options) != EXIT_SUCCESS) {
-       perror(ERR_SAD_EXIT);
-       exit(EXIT_FAILURE);
-       /* NOTREACHED */
+    
+    int success = handle_image(&options);
+    
+    if (!sucess) {
+        perror(ERR_SAD_EXIT);
+        exit(EXIT_FAILURE);
     }
 
     return EXIT_SUCCESS;
@@ -65,6 +60,5 @@ void usage(char *progname, int opt) {
    (void) opt;
    fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
    exit(EXIT_FAILURE);
-   /* NOTREACHED */
 }
 

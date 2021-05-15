@@ -1,63 +1,20 @@
 /* sadx64.c */
-#include "../include/common.h"
-#include "../include/bmp.h"
-#include "../include/sad.h"
-
-#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <sys/time.h>
 #include <libgen.h> /* for basename() */
-#include "saru-bytebuf.h"
+#include <time.h> /* for clock(), CLOCKS_PER_SEC */
+#include <assert.h> /* for assert */
+#include "../include/bmp.h"
+#include "../include/sad.h"
 
-#define EXIT_FAILURE 1
-#define EXIT_SUCCESS 0
-#define FRAME_HEIGHT 10
-#define FRAME_WIDTH 20
+#include "saru-bytebuf.h"
 
 // Link this program with an external C or x86-64 compression function
 extern int sad(uint64_t* template, uint64_t starting_row,
 	uint64_t starting_col, uint64_t* frame, uint64_t f_height, uint64_t f_width);
-int handle_bmp(options_t *options);
-static void template_dim_from_frame_dim(unsigned int frame_w, unsigned int frame_h, unsigned int *x, unsigned int *y);
+
 static int self_test(void);
 static void run_benchmarks();
-
-int run_sad(options_t *options) {
-    if (!options) {
-      errno = EINVAL;
-      return EXIT_FAILURE;
-      /* NOTREACHED */
-    }
-    
-    if (!options->input) {
-      errno = ENOENT;
-      return EXIT_FAILURE;
-      /* NOTREACHED */
-    }
-   
-    if (!self_test()) {
-		printf("Self test failed!\n");
-		return EXIT_FAILURE;
-        /* NOTREACHED */
-	}
-	
-	printf("Self test passed!\n");
-    
-    /* handle user-provided file */
-    if (options->fname) {
-        if (!handle_bmp(options)) {
-            errno = ENOENT;
-            return EXIT_FAILURE;
-            /* NOTREACHED */
-        }
-    }
-    
-    if (options->verbose) {
-        run_benchmarks();
-    }
-	return EXIT_SUCCESS;
-    /* NOTREACHED */
-}
 
 int handle_bmp(options_t *options) {
     BMPInfoHeader biHeader;
@@ -96,15 +53,6 @@ int handle_bmp(options_t *options) {
     sbm_destroy(template);
     sbm_destroy(frame);
     return 1;
-}
-
-/* Finds a square template that fits the given frame dimensions */
-static void 
-template_dim_from_frame_dim(unsigned int frame_w, unsigned int frame_h,
-        unsigned int *x, unsigned int *y)
-{
-    *x = frame_w / 2;
-    *y = frame_h / 2;
 }
 
 static void
@@ -167,37 +115,22 @@ int self_test(void) {
 		7 5 9       8 4 6 8 5	 
 	 */
 	
-    /*
-	 uint64_t frame1[] = {
-		2, 7, 5, 8, 6,
-		1, 7, 4, 2, 7,
-		8, 4, 6, 8, 5
-	 };
-	 uint64_t template1[] = {
-		2, 5, 5,
-		4, 0, 7,
-		7, 5, 9
-	 };
-     // assert(17 == sad(template, 0, 0, frame, 3, 5));
-     */
-    
      unsigned char fb[] = {
          2, 7, 5, 8, 6,
-		1, 7, 4, 2, 7,
-		8, 4, 6, 8, 5
+         1, 7, 4, 2, 7,
+         8, 4, 6, 8, 5
     };
      unsigned char tb[] = {
-		2, 5, 5,
-		4, 0, 7,
-		7, 5, 9
-	 };
+         2, 5, 5,
+         4, 0, 7,
+         7, 5, 9
+     };
 
      // run c_sad
      SBM_WRAP(template, tb, 3, 3);
      SBM_WRAP(frame, fb, 5, 3);
 
      struct sad_result res = c_sad(template, frame);
-     printf("res.sad = %d\n", res.sad);
      assert(17 == res.sad);
      assert(0 == res.frow);
      assert(2 == res.fcol);

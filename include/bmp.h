@@ -1,12 +1,10 @@
-/**
- * bmp.h
- * NOTE: Structs are 1-to-1 byte packed to mimic the BMP headers.
- * specification: https://en.wikipedia.org/wiki/BMP_file_format#Example_1
- */
+/* bmp.h */
 #ifndef BMP_H
 #define BMP_H
 
-#pragma pack(push, 1) // WORD should be 2B
+const int BFHEADER_SIZE = 14;
+const int BIHEADER_SIZE = 36;
+
 typedef struct {
     uint16_t  ftype;        /* specifies the filetype, 0x424D specifies BMP */
     uint32_t  fsize;        /* specifies the total size in bytes, header + data */
@@ -14,7 +12,6 @@ typedef struct {
     uint16_t  reserved2;    /* reserved, must be 0 */
     uint32_t  offset;       /* specifies the offset in bytes from header to data */
 } BMPFileHeader;
-#pragma pack(pop)
 
 // for use with 24bit bitmap with pixel format RGB24
 // size: 36 bytes
@@ -71,11 +68,9 @@ typedef struct {
 */
 
 /* function prototypes */
-unsigned char *parse_24bit_bmp(FILE *f, BMPInfoHeader *new_biHeader);
-unsigned char *parse_24bit_bmp_filename(char *fname, BMPInfoHeader *new_biHeader);
-unsigned char *invert_24bit_bmp(unsigned char *bmp, BMPInfoHeader *biHeader);
-unsigned int bmp_row_padding(unsigned int row_bytes); 
-unsigned int image_width_bytes(BMPInfoHeader *biHeader);
+unsigned char *invert_bmp(unsigned char *bmp, size_t size);
+size_t bmp_padding(size_t rowbytes); 
+size_t bmp_width(BMPInfoHeader *biHeader);
 void print_biHeader(BMPInfoHeader *biHeader);
 
 #endif
