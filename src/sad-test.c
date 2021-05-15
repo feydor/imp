@@ -88,11 +88,10 @@ int handle_bmp(options_t *options) {
     SBM_WRAP(frame, bmpData, frame_width, frame_height);
     
     // start algorithms
-    int res = 0;
-    // res = sad((uint64_t *) template, 0, 0, (uint64_t *) bmpData, 4, 4);
-    
-    res = c_sad( template, frame );
-    printf("Result of C_SAD: %d\n", res);
+    struct sad_result res = c_sad( template, frame );
+    printf("Result of C_SAD (sad): %d\n", res.sad);
+    printf("Result of C_SAD (frow): %ld\n", res.frow);
+    printf("Result of C_SAD (fcol): %ld\n", res.fcol);
     
     sbm_destroy(template);
     sbm_destroy(frame);
@@ -197,10 +196,11 @@ int self_test(void) {
      SBM_WRAP(template, tb, 3, 3);
      SBM_WRAP(frame, fb, 5, 3);
 
-     int res = 0;
-     res = c_sad(template, frame);
-     assert(17 == res);
-     // TODO: Assert frame->row = ?? and frame->col = ??, results location
+     struct sad_result res = c_sad(template, frame);
+     printf("res.sad = %d\n", res.sad);
+     assert(17 == res.sad);
+     assert(0 == res.frow);
+     assert(2 == res.fcol);
 
      free(template);
      free(frame);

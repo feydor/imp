@@ -2,19 +2,19 @@
 #ifndef SAD_H
 #define SAD_H
 
-#include <limits.h>
+#include <stddef.h> /* for size_t */
 
 /* forward declaration */
 struct saru_bytemat;
 
 /* internal struct to hold temporary results */
-typedef struct {
+struct sad_result{
   int sad;
-  unsigned int frow;
-  unsigned int fcol;
-}Result;
+  size_t frow;
+  size_t fcol;
+};
 
 /* interface */
-int c_sad(struct saru_bytemat *template, struct saru_bytemat *frame);
+struct sad_result c_sad(struct saru_bytemat *template, struct saru_bytemat *frame);
 
 #endif
