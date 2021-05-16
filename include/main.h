@@ -2,6 +2,8 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include <stdio.h> /* for FILE */
+
 #ifdef _MSC_VER
 	#include <io.h>
 	typedef __int16 int16_t;
@@ -28,10 +30,12 @@
 
 /* datatypes */
 typedef struct {
-  int           verbose;
-  uint32_t      flags;
-  char         *fname;
-  char         *oname;
+    int           verbose;
+    uint32_t      flags;
+    char         *iname;
+    char         *oname;
+    FILE         *ifp;
+    FILE         *ofp;
 } options_t;
 
 /* function prototypes */

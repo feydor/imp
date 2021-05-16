@@ -8,6 +8,6 @@
 #define FRAME_HEIGHT 10
 #define FRAME_WIDTH 20
 
-int self_test(void);
+int sad_selftest(void);
 
 #endif

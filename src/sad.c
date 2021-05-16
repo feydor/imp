@@ -1,7 +1,8 @@
 /* sad.c */
 #include "../include/common.h"
 #include "../include/sad.h"
-#include <limits.h>
+#include <limits.h> /* for INT_MIN, INT_MAX */
+#include <stddef.h> /* for size_t */
 #include "saru-bytebuf.h"
 
 /* static function prototypes */

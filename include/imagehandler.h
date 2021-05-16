@@ -5,9 +5,6 @@
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 
-/* forward declarations */
-struct options_t;
-
 /* function prototypes */
 int handle_image(options_t *options);
 

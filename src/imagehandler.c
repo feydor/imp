@@ -1,8 +1,14 @@
 /* imagehandler.c - main routine for image processing */
-#include "../include/imagehandler.h"
-#include "../include/main.h"
-
 #include <unistd.h> /* for EXIT_FAILURE, EXIT_SUCCESS */
+#include <errno.h> /* for EINVAL */
+#include <stdio.h> /* for printf */
+#include "../include/main.h"
+#include "../include/imagehandler.h"
+#include "../include/imageproc.h"
+#include "../include/sad-test.h"
+
+/* static function prototypes */
+static int valid_options(options_t *options);
 
 int 
 handle_image(options_t *options)
@@ -18,7 +24,7 @@ handle_image(options_t *options)
     size_t height, width;
 
     create_image_file(options->iname, options->oname);
-    get_image_size(options->input, &width, &height);
+    get_image_size(options->iname, &width, &height);
     image = allocate_image_buf(width, height);
     read_image(options->iname, image, width * height);
 
@@ -39,8 +45,10 @@ valid_options(options_t *options)
       return EXIT_FAILURE;
     }
     
-    if (!options->fname) {
+    if (!options->iname) {
       errno = ENOENT;
       return EXIT_FAILURE;
     }
+
+    return EXIT_SUCCESS;
 }

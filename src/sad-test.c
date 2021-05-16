@@ -4,6 +4,11 @@
 #include <libgen.h> /* for basename() */
 #include <time.h> /* for clock(), CLOCKS_PER_SEC */
 #include <assert.h> /* for assert */
+#include <stdio.h> /* for printf */
+#include <stdlib.h> /* for free */
+#include <errno.h> /* for errno */
+#include <string.h> /* for memcpy */
+#include "../include/sad-test.h"
 #include "../include/bmp.h"
 #include "../include/sad.h"
 
@@ -13,16 +18,15 @@
 extern int sad(uint64_t* template, uint64_t starting_row,
 	uint64_t starting_col, uint64_t* frame, uint64_t f_height, uint64_t f_width);
 
-static int self_test(void);
 static void run_benchmarks();
 
+/*
 int handle_bmp(options_t *options) {
-    BMPInfoHeader biHeader;
+    struct bmp_iheader biHeader;
     unsigned char *bmpData; // must be free'd
     if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
         errno = ENOENT;
         return 0;
-        /* NOTREACHED */
     }
     
     printf("Filename: %s\n", basename(options->fname));
@@ -54,6 +58,7 @@ int handle_bmp(options_t *options) {
     sbm_destroy(frame);
     return 1;
 }
+*/
 
 static void
 run_benchmarks() 
@@ -106,7 +111,7 @@ run_benchmarks()
     sbm_destroy(tb);
 }
 
-int self_test(void) {
+int sad_selftest(void) {
 	// testcase 1: "wikipedia example"
 	/*
 	 * Template    Search image

@@ -19,7 +19,7 @@ gen = generator(yasm,
 
 yasm_objs = gen.process(yasm_src)
 
-src_c = ['src/main.c', 'src/sad-test.c', 'src/sad.c', 'src/bmp.c']
+src_c = ['src/main.c', 'src/sad-test.c', 'src/sad.c', 'src/bmp.c', 'src/imageproc.c', 'src/imagehandler.c']
 incl_dir = include_directories('include')
 deps = [math_dep, libsaru_buf_dep]
 

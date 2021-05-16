@@ -4,7 +4,7 @@
 
 /*
 // 24bit bmp with RGB colors
-unsigned char *parse_24bit_bmp(FILE *file, BMPInfoHeader *biHeader) 
+unsigned char *parse_24bit_bmp(FILE *file, struct bmp_iheader *bih) 
 {
     BMPFileHeader bfHeader;
     unsigned char *bmpImage;
@@ -19,13 +19,13 @@ unsigned char *parse_24bit_bmp(FILE *file, BMPInfoHeader *biHeader)
     }
     
     // read the bmp info header
-    fread(biHeader, sizeof(BMPInfoHeader), 1, file);
+    fread(bih, sizeof(struct bmp_iheader), 1, file);
     
     // move the file ptr to begining of bmp data
     fseek(file, bfHeader.offset, SEEK_SET);
     
     // allocate bytes for bmp image data
-    if ( !(bmpImage = malloc(biHeader->imageSize)) ) {
+    if ( !(bmpImage = malloc(bih->imageSize)) ) {
         perror(ERR_MALLOC_NULL);
         free(bmpImage);
         fclose(file);
@@ -33,7 +33,7 @@ unsigned char *parse_24bit_bmp(FILE *file, BMPInfoHeader *biHeader)
     }
     
     // read the bmp image data
-    fread(bmpImage, biHeader->imageSize, 1, file);
+    fread(bmpImage, bih->imageSize, 1, file);
     
     if (!bmpImage) {
         perror(ERR_FREAD_INPUT);
@@ -50,7 +50,7 @@ unsigned char *parse_24bit_bmp(FILE *file, BMPInfoHeader *biHeader)
 unsigned char *
 invert_bmp(unsigned char *bmp, size_t size) 
 {
-    for (size_t i = 0; i < bmpsize; i += 3) {
+    for (size_t i = 0; i < size; i += 3) {
         bmp[i] = 255 - bmp[i];     // !R
         bmp[i+1] = 255 - bmp[i+1]; // !G
         bmp[i+2] = 255 - bmp[i+2]; // !B
@@ -73,18 +73,18 @@ bmp_padding(size_t rowbytes)
  * returns the bmp width in bytes
  */
 size_t
-bmp_width(BMPInfoHeader *biHeader)
+bmp_width(struct bmp_iheader *bih)
 {
-  return biHeader->imageWidth * biHeader->bitsPerPxl / 8;
+  return bih->imageWidth * bih->bitsPerPxl / 8;
 }
 
-void print_biHeader(BMPInfoHeader *biHeader) 
+void print_bih(struct bmp_iheader *bih) 
 {
-    printf("Printing BMPInfoHeader...\n");
-    printf("size: %u B\n", biHeader->size);
-    printf("imageWidth: %u px\n", biHeader->imageWidth);
-    printf("imageHeight: %u px\n", biHeader->imageHeight);
-    printf("bitsPerPxl: %u b/px\n", biHeader->bitsPerPxl);
-    printf("imageSize: %u B\n", biHeader->imageSize);
+    printf("Printing struct bmp_iheader...\n");
+    printf("size: %u B\n", bih->size);
+    printf("imageWidth: %u px\n", bih->imageWidth);
+    printf("imageHeight: %u px\n", bih->imageHeight);
+    printf("bitsPerPxl: %u b/px\n", bih->bitsPerPxl);
+    printf("imageSize: %u B\n", bih->imageSize);
 }
 

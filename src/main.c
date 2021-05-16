@@ -2,10 +2,9 @@
 #include <libgen.h> /* for basename() */
 #include <getopt.h> /* for external optarg, opterr, optind, getopt() */
 #include <stdio.h> /* for FILE, fprint, fread, stdin, stdout, stderr */
-#include <stdlib.h> /* for malloc, realloc */
 #include <errno.h> /* for external errno variable */
 #include <string.h> /* for memcpy, memset, strlen */
-#include <math.h> /* for sqrt() */
+#include <stdlib.h> /* for stroul, exit() */
 #include "../include/main.h"
 #include "../include/imagehandler.h"
 
@@ -17,14 +16,14 @@ static void usage(char *progname, int opt);
 
 int main(int argc, char *argv[]) {
     int opt;
-    options_t options = { 0, 0x0, NULL, stdin, stdout };
+    options_t options = { 0, 0x0, NULL, NULL, stdin, stdout };
 
     opterr = 0;
 
     while ((opt = getopt(argc, argv, OPTSTR)) != EOF)
        switch(opt) {
            case 'i':
-              options.fname = optarg;
+              options.iname = optarg;
               break;
 
            case 'o':
@@ -46,9 +45,7 @@ int main(int argc, char *argv[]) {
               break;
        }
     
-    int success = handle_image(&options);
-    
-    if (!sucess) {
+    if (!handle_image(&options)) {
         perror(ERR_SAD_EXIT);
         exit(EXIT_FAILURE);
     }

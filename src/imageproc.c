@@ -1,13 +1,17 @@
 /* imageproc.c */
+#include <stdio.h> /* for FILE, freas, fwrite */
+#include <stdint.h> /* for uint16_t */
+#include <stdlib.h> /* for malloc, exit */
 #include "../include/imageproc.h"
+#include "../include/bmp.h"
 
 /* static function protoypes */
 static int isbmp(FILE *fp);
 static uint16_t read_ftype(FILE *fp);
-static void read_bmpheaders(FILE *fp, BMPFileHeader *bfHeader, 
-                                      BMPInfoHeader *biHeader);
-static void create_bmp_file(FILE *fp, BMPFileHeader *bfHeader, 
-                                      BMPInfoHeader *biHeader);
+static void read_bmpheaders(FILE *fp, struct bmp_fheader *bfHeader, 
+                                      struct bmp_iheader *biHeader);
+static void create_bmp_file(FILE *fp, struct bmp_fheader *bfHeader, 
+                                      struct bmp_iheader *biHeader);
 static void swap_endian(unsigned char *image, size_t size);
 static void write_bmp_buf(FILE *fp, unsigned char *image, size_t size);
 
@@ -18,13 +22,13 @@ create_image_file(char *in, char *out)
     FILE *ifp = fopen(in, "rb");
     FILE *ofp = fopen(out, "wb");
     if (!ifp || !ofp) {
-        printf("Error opening file, create_image_file\n");
-        exit(1);
+        return;
+        // return NULL;
     }
 
-    if (isbmp(fp)) {
-        BMPFileHeader bfh;
-        BMPInfoHeader bih;
+    if (isbmp(ifp)) {
+        struct bmp_fheader bfh;
+        struct bmp_iheader bih;
         read_bmpheaders(ifp, &bfh, &bih);
         create_bmp_file(ifp, &bfh, &bih);
     }
@@ -35,20 +39,20 @@ create_image_file(char *in, char *out)
 
 /* modifies width and height to hold the dimensions of file fp in bytes */
 void
-get_image_size(FILE *fp, size_t *width, size_t *height)
+get_image_size(char *in, size_t *width, size_t *height)
 {
     
-    FILE *fp = fopen(input, "rb");
+    FILE *fp = fopen(in, "rb");
     if (!fp) {
         printf("Error opening files, get_image_size\n");
         exit(1);
     }
 
     if (isbmp(fp)) {
-        struct BMPFileHeader bfh;
-        struct BMPInfoHeader bih;
+        struct bmp_fheader bfh;
+        struct bmp_iheader bih;
         
-        read_bmpheaders(input, &bfh, &bih);
+        read_bmpheaders(fp, &bfh, &bih);
         *width = bmp_width(&bih) + bmp_padding(bmp_width(&bih));
         *height = bih.imageHeight;
     }
@@ -79,7 +83,7 @@ read_image(char *in, unsigned char *image, size_t size)
         const int offset = BFHEADER_SIZE + BIHEADER_SIZE;
         fseek(fp, offset, SEEK_SET);
         fread(image, size, 1, fp);
-        swap_endian(image);
+        swap_endian(image, size);
     }
     
     fclose(fp);
@@ -95,10 +99,10 @@ write_image(char *out, unsigned char *image, size_t size)
     }
 
     if (isbmp(fp)) {
-        BMPFileHeader bfh;    
-        BMPInfoHeader bih;    
+        struct bmp_fheader bfh;    
+        struct bmp_iheader bih;    
         read_bmpheaders(fp, &bfh, &bih);
-        write_buf_buf(fp, image, size);
+        write_bmp_buf(fp, image, size);
     }
 
     fclose(fp);
@@ -120,7 +124,7 @@ free_image_buf(unsigned char *image)
 static int
 isbmp(FILE *fp)
 {
-    return read_ftype(fname) == 0x4D42;
+    return read_ftype(fp) == 0x4D42;
 }
 
 /* the first two bytes of an image header specifies its filetype; return it */
@@ -129,14 +133,15 @@ read_ftype(FILE *fp)
 {
     if (!fp)
         return 0;
+    uint16_t ftype = 0;
     fread(&ftype, sizeof(ftype), 1, fp);
     rewind(fp);
     return ftype;
 }
 
 static void
-read_bmpheaders(FILE *fp, BMPFileHeader *bfHeader, 
-                          BMPInfoHeader *biHeader)
+read_bmpheaders(FILE *fp, struct bmp_fheader *bfHeader, 
+                          struct bmp_iheader *biHeader)
 {
     if (!fp)
         return;
@@ -146,8 +151,8 @@ read_bmpheaders(FILE *fp, BMPFileHeader *bfHeader,
 
 /* writes the headers into a new file named fname */
 static void
-create_bmp_file(FILE *fp, BMPFileHeader *bfHeader, 
-                          BMPInfoHeader *biHeader) 
+create_bmp_file(FILE *fp, struct bmp_fheader *bfHeader, 
+                          struct bmp_iheader *biHeader) 
 {
     if (!fp) {
         printf("Error! Writing file.");
@@ -162,7 +167,7 @@ static void
 swap_endian(unsigned char *image, size_t size)
 {
     unsigned char temp;
-    for (size_t = 0; i < size; i += 3) {
+    for (size_t i = 0; i < size; i += 3) {
         temp = image[i];
         image[i] = image[i + 2];
         image[i + 2] = temp;

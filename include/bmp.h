@@ -2,20 +2,20 @@
 #ifndef BMP_H
 #define BMP_H
 
-const int BFHEADER_SIZE = 14;
-const int BIHEADER_SIZE = 36;
+#define BFHEADER_SIZE 14
+#define BIHEADER_SIZE 36
 
-typedef struct {
+struct bmp_fheader {
     uint16_t  ftype;        /* specifies the filetype, 0x424D specifies BMP */
     uint32_t  fsize;        /* specifies the total size in bytes, header + data */
     uint16_t  reserved1;    /* reserved, must be 0 */
     uint16_t  reserved2;    /* reserved, must be 0 */
     uint32_t  offset;       /* specifies the offset in bytes from header to data */
-} BMPFileHeader;
+};
 
 // for use with 24bit bitmap with pixel format RGB24
 // size: 36 bytes
-typedef struct {
+struct bmp_iheader {
     uint32_t  size;        /* specifies the size of the info header in bytes */
     uint32_t  imageWidth;       /* specifies width in pixels */
     uint32_t  imageHeight;      /* specifies height in pixels */
@@ -27,7 +27,7 @@ typedef struct {
     uint32_t  YPxlsPerMeter; /* specifies the number of pixels per meter, y axis */
     uint32_t  colorsUsed;      /* number of colors used */
     uint32_t  colorsImportant; /* number of colors that are important */
-} BMPInfoHeader;
+};
 
 /*
 // for use with 32bit bitmap with pixel format ARGB32
@@ -70,7 +70,7 @@ typedef struct {
 /* function prototypes */
 unsigned char *invert_bmp(unsigned char *bmp, size_t size);
 size_t bmp_padding(size_t rowbytes); 
-size_t bmp_width(BMPInfoHeader *biHeader);
-void print_biHeader(BMPInfoHeader *biHeader);
+size_t bmp_width(struct bmp_iheader *biHeader);
+void print_biHeader(struct bmp_iheader *biHeader);
 
 #endif
