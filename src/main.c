@@ -16,18 +16,18 @@ static void usage(char *progname, int opt);
 
 int main(int argc, char *argv[]) {
     int opt;
-    options_t options = { 0, 0x0, NULL, NULL, stdin, stdout };
+    options_t options = { 0, 0x0, argv[0], NULL, NULL, stdin, stdout };
 
     opterr = 0;
 
     while ((opt = getopt(argc, argv, OPTSTR)) != EOF)
        switch(opt) {
            case 'i':
-              options.iname = optarg;
+              options.src = optarg;
               break;
 
            case 'o':
-              options.oname = optarg;
+              options.dest = optarg;
               break;
              
            case 'f':
@@ -44,9 +44,9 @@ int main(int argc, char *argv[]) {
               /* NOTREACHED */
               break;
        }
-    
+
     if (!handle_image(&options)) {
-        perror(ERR_SAD_EXIT);
+        perror(ERR_HANDLEIMAGE);
         exit(EXIT_FAILURE);
     }
 

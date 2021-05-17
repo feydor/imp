@@ -2,6 +2,9 @@
 #ifndef BMP_H
 #define BMP_H
 
+#include <stdint.h> /* for uint32_t */
+#include <stddef.h> /* for size_t */
+
 #define BFHEADER_SIZE 14
 #define BIHEADER_SIZE 36
 
@@ -69,8 +72,9 @@ typedef struct {
 
 /* function prototypes */
 unsigned char *invert_bmp(unsigned char *bmp, size_t size);
-size_t bmp_padding(size_t rowbytes); 
-size_t bmp_width(struct bmp_iheader *biHeader);
-void print_biHeader(struct bmp_iheader *biHeader);
+int bmp_padding(int width); 
+size_t bmp_width(struct bmp_iheader *bih);
+void print_bih(struct bmp_iheader *bih);
+void print_bfh(struct bmp_fheader *bfh);
 
 #endif

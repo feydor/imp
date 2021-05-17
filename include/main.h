@@ -20,7 +20,7 @@
 #define ERR_FOPEN_INPUT  "fopen(input, r)"
 #define ERR_FOPEN_OUTPUT "fopen(output, w)"
 #define ERR_FREAD_INPUT "fread failed"
-#define ERR_SAD_EXIT "run_sad blew up"
+#define ERR_HANDLEIMAGE "handle_image blew up"
 #define ERR_NOT_BMP "filetype is not a bmp"
 #define ERR_MALLOC_NULL "malloc returned null"
 #define DEFAULT_PROGNAME "sadx64"
@@ -32,10 +32,11 @@
 typedef struct {
     int           verbose;
     uint32_t      flags;
-    char         *iname;
-    char         *oname;
-    FILE         *ifp;
-    FILE         *ofp;
+    char         *progname;
+    char         *src;
+    char         *dest;
+    FILE         *input;
+    FILE         *output;
 } options_t;
 
 /* function prototypes */

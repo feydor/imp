@@ -1,14 +1,14 @@
 /* sad.c */
-#include "../include/common.h"
 #include "../include/sad.h"
 #include <limits.h> /* for INT_MIN, INT_MAX */
 #include <stddef.h> /* for size_t */
+#include <string.h> /* for memset */
 #include "saru-bytebuf.h"
 
 /* static function prototypes */
 static int do_sad_calculation(struct saru_bytemat *frame, struct saru_bytemat *template);
 static int sum(size_t height, size_t width, int arr[][width]);
-static inline bool are_empty(unsigned char *buf1, unsigned char *buf2);
+static int are_empty(unsigned char *buf1, unsigned char *buf2);
 static struct sad_result min_sad(struct sad_result *results, int len); 
 
 /**
@@ -74,7 +74,7 @@ do_sad_calculation(struct saru_bytemat *frame, struct saru_bytemat *template)
   return sum(template->hgt, template->wid, temp);
 }
 
-static bool 
+static int
 are_empty(unsigned char *buf1, unsigned char *buf2) 
 {
   return !buf1 || !buf2;
