@@ -48,8 +48,6 @@ handle_image(options_t *options)
     }
 
     // TODO: call image processing routine here
-    //for (size_t i = 0; i < width * height; i++)
-     //   printf("0x%X ", image[i]);
     
     if (!write_image(image, options->dest, width * height)) {
         perror("write_image");

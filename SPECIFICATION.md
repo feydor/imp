@@ -2,6 +2,7 @@ Specification for libsaru_imageproc
 
 Images are defined as arrays of unsigned chars.
 Each image type has an expected endianness.
+Bmp functions expect 24bit color encoding.
 
 int create_image_output_file(const char *src, char* dest)
     the file pointed to by dest will contain the image headers from the 

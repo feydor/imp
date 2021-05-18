@@ -16,7 +16,7 @@ static int read_bmpheaders(FILE *fp, struct bmp_fheader *bfhead,
 static int create_bmp_file(FILE *fp, struct bmp_fheader *bfhead, 
                                       struct bmp_iheader *bihead);
 static int swap_endian(unsigned char *image, size_t size);
-static int write_bmp_buf(FILE *fp, const unsigned char *image, size_t size);
+static int write_bmp_buf(FILE *fp, const unsigned char *image, size_t offset, size_t size);
 
 /**
  * Creates an output file at the pathname pointed to by dest
@@ -41,7 +41,7 @@ create_image_output_file(const char *src, char *dest)
         struct bmp_iheader bih;
         if (!read_bmpheaders(input, &bfh, &bih))
             return -1;        
-        if (!create_bmp_file(input, &bfh, &bih))
+        if (!create_bmp_file(output, &bfh, &bih))
             return -1;
     }
 
@@ -75,7 +75,6 @@ get_image_size(const char *src, size_t *width, size_t *height)
         
         if (!read_bmpheaders(fp, &bfh, &bih))
             return -1;
-        
 
         print_bih(&bih);
 
@@ -129,15 +128,9 @@ read_image(const char *src, unsigned char *dest, size_t size)
         print_bfh(&bfh);
 
         const int offset = bfh.offset;
-        printf("bfh.offset = 0x%X\n", bfh.offset);
         fseek(fp, offset, SEEK_SET);
-        
-        printf("%ld\n", ftell(fp));
-
         fread(dest, size, 1, fp);
         swap_endian(dest, size);
-        for (size_t i = 0; i < size; i++)
-            printf("0x%X ", dest[i]);
     }
     
     fclose(fp);
@@ -152,7 +145,7 @@ read_image(const char *src, unsigned char *dest, size_t size)
  * NOTE: the image pointed to by src must already exist
  */
 int
-write_image(const unsigned char *src, char *dest, size_t size)
+write_image(unsigned char *src, char *dest, size_t size)
 {
     if (!src || !dest) {
         errno = EINVAL;
@@ -168,7 +161,10 @@ write_image(const unsigned char *src, char *dest, size_t size)
         struct bmp_iheader bih;    
         if (!read_bmpheaders(fp, &bfh, &bih))
             return -1;
-        if (!write_bmp_buf(fp, src, size))
+
+        swap_endian(src, size);
+
+        if (!write_bmp_buf(fp, src, bfh.offset, size))
             return -1;
     }
     fclose(fp);
@@ -277,18 +273,20 @@ swap_endian(unsigned char *image, size_t size)
 }
 
 /** 
- * writes size bytes from the image buffer pointed to by image
- * into the stream pointed to by fp
+ * writes size bytes starting from the offset of the image buffer
+ * pointed to by image into the stream pointed to by fp
+ * NOTE: Expects the image to be in little-endian/BGR form
  */
 static int
-write_bmp_buf(FILE *fp, const unsigned char *image, size_t size)
+write_bmp_buf(FILE *fp, const unsigned char *image, size_t offset, size_t size)
 {
     if (!fp || !image) {
         errno = EINVAL;
         return -1;
     }
 
-    const int offset = BFHEADER_SIZE + BIHEADER_SIZE;
+    // const int offset = BFHEADER_SIZE + BIHEADER_SIZE;
+    printf("WRITE offset: 0x%X\n", offset);
     fseek(fp, offset, SEEK_SET);
     fwrite(image, size, 1, fp);
     return 1;
