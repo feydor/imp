@@ -6,8 +6,9 @@
 #include <stddef.h> /* for size_t */
 
 #define BFHEADER_SIZE 14
-#define BIHEADER_SIZE 36
+#define BIHEADER_SIZE 40
 
+// size: 16 bytes (14 bytes  + 2 bytes padding after ftype)
 struct bmp_fheader {
     uint16_t  ftype;        /* specifies the filetype, 0x424D specifies BMP */
     uint32_t  fsize;        /* specifies the total size in bytes, header + data */
@@ -17,7 +18,7 @@ struct bmp_fheader {
 };
 
 // for use with 24bit bitmap with pixel format RGB24
-// size: 36 bytes
+// size: 40 bytes
 struct bmp_iheader {
     uint32_t  size;        /* specifies the size of the info header in bytes */
     uint32_t  imageWidth;       /* specifies width in pixels */

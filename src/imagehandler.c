@@ -4,8 +4,10 @@
 #include <stdio.h> /* for printf */
 #include <stdlib.h> /* for exit */
 #include <string.h> /* for strerror */
+#include "../include/bmp.h"
 #include "../include/main.h"
 #include "../include/imagehandler.h"
+#include "../include/imageio.h"
 #include "../include/imageproc.h"
 #include "../include/sad-test.h"
 
@@ -48,6 +50,8 @@ handle_image(options_t *options)
     }
 
     // TODO: call image processing routine here
+    // invert_bmp(image, height * width);
+    ordered_dithering(image, width, height);
     
     if (!write_image(image, options->dest, width * height)) {
         perror("write_image");

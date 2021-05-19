@@ -1,7 +1,8 @@
-/* imageproc.c - functions to read and write image files */
-#include <stdio.h> /* for FILE, freas, fwrite */
+/* imageproc.c - functions for image processing */
+#include <assert.h> /* for assert */
 #include <stdint.h> /* for uint16_t */
 #include <stdlib.h> /* for malloc, exit */
+#include <stdio.h> /* for printf */
 #include <errno.h> /* for errno */
 #include "../include/imageproc.h"
 #include "../include/bmp.h"
@@ -9,285 +10,101 @@
 extern int errno; /* these functions set errno on errors */
 
 /* static function protoypes */
-static int isbmp(FILE *fp);
-static uint16_t read_ftype(FILE *fp);
-static int read_bmpheaders(FILE *fp, struct bmp_fheader *bfhead, 
-                                      struct bmp_iheader *bihead);
-static int create_bmp_file(FILE *fp, struct bmp_fheader *bfhead, 
-                                      struct bmp_iheader *bihead);
-static int swap_endian(unsigned char *image, size_t size);
-static int write_bmp_buf(FILE *fp, const unsigned char *image, size_t offset, size_t size);
+static void bayer_sqrmat(unsigned char *mat, size_t dim);
+static unsigned reverse(unsigned x);
+static unsigned interleave(unsigned x, unsigned y, size_t n);
 
 /**
- * Creates an output file at the pathname pointed to by dest
- * containing the file header(s) from the file pointed to by src.
- * Returns 1 if successful, -1 otherwise.
+ * ordered dithering with Bayer matrices
  */
-int
-create_image_output_file(const char *src, char *dest)
+int ordered_dithering(unsigned char *src, size_t w, size_t h)
 {
-    if (!src || !dest) {
-        errno = EINVAL;
-        return -1;
-    }
+    unsigned pal[] = {
+        0x000000, 0x008000, 0x00FF00,
+        0x0000FF, 0x0080FF, 0x00FFFF,
+        0x800000, 0x808000, 0x80FF00,
+        0x8000FF, 0x8080FF, 0x80FFFF,
+        0xFF0000, 0xFF8000, 0xFFFF00,
+        0xFF00FF, 0xFF80FF, 0xFFFFFF
+    };
 
-    FILE *input = fopen(src, "rb");
-    FILE *output = fopen(dest, "wb");
-    if (!input || !output)
-        return -1;
+    unsigned char thresholds[] = { 256/4, 256/4, 256/4 };
 
-    if (isbmp(input)) {
-        struct bmp_fheader bfh;
-        struct bmp_iheader bih;
-        if (!read_bmpheaders(input, &bfh, &bih))
-            return -1;        
-        if (!create_bmp_file(output, &bfh, &bih))
-            return -1;
-    }
+    /* using an 8x8 Bayer matrix */
+    const size_t dim = 8*8;
+    unsigned char mat[dim];
+    bayer_sqrmat(mat, 8);
 
-    fclose(input);
-    fclose(output);
+    /* TODO
+    unsigned char *r = src;
+    unsigned char *g = src + 1;
+    unsigned char *b = src + 2;
+    for (size_t y = 0; y < h; ++y)
+        for (size_t x = 0; x < w; ++x) {
+            unsigned char factor = bmat[(x & 7) + ((y & 7) << 3)];
+            unsigned color = color_from_index(src, indexat(src, x, y));
+            unsigned char r = color['r'] + factor * thresholds[0];
+            unsigned char g = color['g'] + factor * thresholds[1];
+            unsigned char b = color['b'] + factor * thresholds[2];
+
+            setpx(src, x, y, closestcolor(src, r, g, b));
+        }
+    */
 
     return 1;
-}
-
-/** 
- * Updates the variables pointed to by width and height
- * with the dimensions of the image file pointed to by src.
- * Returns the image size in bytes if successful, -1 otherwise.
- **/
-int
-get_image_size(const char *src, size_t *width, size_t *height)
-{
-    if (!src || !width || !height) {
-        errno = EINVAL;
-        return -1;
-    }
-    
-    FILE *fp = fopen(src, "rb");
-    if (!fp) {
-        return -1;
-    }
-
-    if (isbmp(fp)) {
-        struct bmp_fheader bfh;
-        struct bmp_iheader bih;
-        
-        if (!read_bmpheaders(fp, &bfh, &bih))
-            return -1;
-
-        print_bih(&bih);
-
-        *width = bmp_width(&bih) + bmp_padding((int)bmp_width(&bih));
-        *height = bih.imageHeight;
-
-        printf("bmp_width: %lu, padding: %d\n", bmp_width(&bih), bmp_padding(bmp_width(&bih)));
-        printf("width: %lu, height: %lu\n", *width, *height);
-    }
-    
-    fclose(fp);
-
-    return *width * *height;
-}
-
-/**
- * Allocates an unsigned char buffer of height * width bytes.
- * Returns a pointer to the new memory if successful, NULL otherwise.
- */
-unsigned char *
-allocate_image_buf(size_t height, size_t width)
-{
-    unsigned char *buf;
-    buf = malloc(height * width); 
-    return buf;
-}
-
-/**
- * Reads size bytes from the file pointed to by src
- * and writes them to the image buffer pointed to by dest.
- * Returns 1 if successful, -1 otherwise.
- **/
-int
-read_image(const char *src, unsigned char *dest, size_t size)
-{
-    if (!src || !dest) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    FILE *fp = fopen(src, "rb");
-    if (!fp)
-        return -1;
-
-    if (isbmp(fp)) {
-        struct bmp_fheader bfh;
-        struct bmp_iheader bih;
-        if (!read_bmpheaders(fp, &bfh, &bih))
-            return -1;
-        
-        print_bfh(&bfh);
-
-        const int offset = bfh.offset;
-        fseek(fp, offset, SEEK_SET);
-        fread(dest, size, 1, fp);
-        swap_endian(dest, size);
-    }
-    
-    fclose(fp);
-
-    return 1;
-}
-
-/**
- * Writes size bytes from the image buffer pointed to by src
- * to the file pointed to by dest.
- * Returns 1 if successful, -1 otherwise.
- * NOTE: the image pointed to by src must already exist
- */
-int
-write_image(unsigned char *src, char *dest, size_t size)
-{
-    if (!src || !dest) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    FILE *fp = fopen(dest, "r+b");
-    if (!fp)
-        return -1;
-
-    if (isbmp(fp)) {
-        struct bmp_fheader bfh;    
-        struct bmp_iheader bih;    
-        if (!read_bmpheaders(fp, &bfh, &bih))
-            return -1;
-
-        swap_endian(src, size);
-
-        if (!write_bmp_buf(fp, src, bfh.offset, size))
-            return -1;
-    }
-    fclose(fp);
-
-    return 1;
-}
-
-/**
- * frees the memory pointed to by image and sets it to NULL
- */
-void
-free_image_buf(unsigned char *image)
-{
-    free(image); /* free(NULL) is valid */
-    image = NULL;
 }
 
 
 /**
- * static functions start here
+ * returns a Bayer matrix of X width and Y height
+ * Algorithm for assigning slot (x, y):
+ * 1. Take two values: the y coordinate and the XOR of the x and y coordinates,
+ * 2. Interleave their bits in reverse order,
+ * 3. Floating point divide the result by N (x * y)
  */
-
-/* it is a bmp if the first two bytes of the file are 0x4D42 */
-static int
-isbmp(FILE *fp)
+static void
+bayer_sqrmat(unsigned char *mat, size_t dim)
 {
-    return read_ftype(fp) == 0x4D42;
+    printf(" X=%lu, Y=%lu:\n", dim, dim);
+    for (size_t y = 0; y < dim; ++y) {
+        printf("    ");
+        for (size_t x = 0; x < dim; ++x) {
+            unsigned char xc = x ^ y, yc = y;
+            unsigned char res = 0, mask = dim - 1;
+            res = reverse(interleave(xc, yc, dim));
+            mat[x + y * dim] = res;
+            printf("%4d", res);
+        }
+        printf(" |");
+        if (y == 0)
+            printf(" 1/%lu", dim * dim);
+        printf("\n");
+    }
 }
 
-/** 
- * the first two bytes of an image header specifies its filetype
- * return it. 
+static unsigned
+reverse(unsigned x) {
+   unsigned y = 0;
+   for (size_t i = 0; i < 7 ; ++i) {
+       y |= x & 1; // copy the set bits into tmp
+       x >>= 1; 
+       y <<= 1;
+   }
+   return y;
+}
+
+/**
+ * returns an unsigned number of size 2n bits
+ * which is composed of the bits of x and y interleaved together
+ * starting with the first bit of x
  */
-static uint16_t
-read_ftype(FILE *fp)
+static unsigned
+interleave(unsigned x, unsigned y, size_t n)
 {
-    if (!fp) {
-        errno = EINVAL;
-        return -1;
+    unsigned z = 0;
+    for (size_t i = 0; i < n; ++i) { 
+        z |= ((x & (1 << i)) << i);
+        z |= ((y & (1 << i)) << (i + 1));
     }
-
-    uint16_t ftype = 0;
-    fread(&ftype, sizeof(ftype), 1, fp);
-    rewind(fp);
-    return ftype;
-}
-
-/* reads the bmp headers from the file pointed to by fp 
- * returns the fp to the begining of the gile when done
- */
-static int
-read_bmpheaders(FILE *fp, struct bmp_fheader *bfhead, 
-                          struct bmp_iheader *bihead)
-{
-    if (!fp || !bfhead || !bihead) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    fread(&bfhead->ftype, sizeof(uint16_t), 1, fp);
-    fread(&bfhead->fsize, sizeof(uint32_t), 1, fp);
-    fread(&bfhead->reserved1, sizeof(uint16_t), 1, fp);
-    fread(&bfhead->reserved2, sizeof(uint16_t), 1, fp);
-    fread(&bfhead->offset, sizeof(uint32_t), 1, fp);
-    fread(bihead, BIHEADER_SIZE, 1, fp);
-    rewind(fp);
-    return 1;
-}
-
-/* writes the headers into the file pointed to by fp */
-static int
-create_bmp_file(FILE *fp, struct bmp_fheader *bfhead, 
-                          struct bmp_iheader *bihead) 
-{
-    if (!fp || !bfhead || !bihead) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    fwrite(&bfhead->ftype, sizeof(uint16_t), 1, fp);
-    fwrite(&bfhead->fsize, sizeof(uint32_t), 1, fp);
-    fwrite(&bfhead->reserved1, sizeof(uint16_t), 1, fp);
-    fwrite(&bfhead->reserved2, sizeof(uint16_t), 1, fp);
-    fwrite(&bfhead->offset, sizeof(uint32_t), 1, fp);
-    fwrite(bihead, BIHEADER_SIZE, 1, fp);
-    return 1;
-}
-
-/* swap the least-significant byte with the most-significant */
-static int
-swap_endian(unsigned char *image, size_t size)
-{
-    if (!image) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    unsigned char temp;
-    for (size_t i = 0; i < size; i += 3) {
-        temp = image[i];
-        image[i] = image[i + 2];
-        image[i + 2] = temp;
-    }
-
-    return 1;
-}
-
-/** 
- * writes size bytes starting from the offset of the image buffer
- * pointed to by image into the stream pointed to by fp
- * NOTE: Expects the image to be in little-endian/BGR form
- */
-static int
-write_bmp_buf(FILE *fp, const unsigned char *image, size_t offset, size_t size)
-{
-    if (!fp || !image) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    // const int offset = BFHEADER_SIZE + BIHEADER_SIZE;
-    printf("WRITE offset: 0x%X\n", offset);
-    fseek(fp, offset, SEEK_SET);
-    fwrite(image, size, 1, fp);
-    return 1;
+    return z;
 }
