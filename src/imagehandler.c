@@ -4,8 +4,8 @@
 #include <stdio.h> /* for printf */
 #include <stdlib.h> /* for exit */
 #include <string.h> /* for strerror */
-#include "../include/bmp.h"
 #include "../include/main.h"
+#include "../include/bmp.h"
 #include "../include/imagehandler.h"
 #include "../include/imageio.h"
 #include "../include/imageproc.h"
@@ -29,34 +29,20 @@ handle_image(options_t *options)
     unsigned char *image = NULL;
     size_t height = 0, width = 0;
 
-    if (!create_image_output_file(options->src, options->dest)) {
-        perror("create_image_output_file");
-        return -1;
-    }
-
-    if (!get_image_size(options->src, &width, &height)) {
+    if (!get_image_size(options->src, &width, &height))
         perror("get_image_size");
-        return -1;
-    }
 
-    if (!(image = allocate_image_buf(width, height))) {
-        perror("allocate_image_buf");
-        return -1;
-    }
+    image = allocate_image_buf(width, height);
 
-    if (!read_image(options->src, image, width * height)) {
+    if (!read_image(options->src, image, width * height))
         perror("read_image");
-        return -1;
-    }
 
     // TODO: call image processing routine here
     // invert_bmp(image, height * width);
     ordered_dithering(image, width, height);
     
-    if (!write_image(image, options->dest, width * height)) {
+    if (!write_image(image, options->src, options->dest, width * height))
         perror("write_image");
-        return -1;
-    }
 
     free_image_buf(image);
     

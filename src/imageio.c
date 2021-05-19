@@ -146,29 +146,35 @@ read_image(const char *src, unsigned char *dest, size_t size)
  * NOTE: the image pointed to by src must already exist
  */
 int
-write_image(unsigned char *src, char *dest, size_t size)
+write_image(unsigned char *image, char *src, char *dest, size_t size)
 {
-    if (!src || !dest) {
+    if (!image || !src || !dest) {
         errno = EINVAL;
         return -1;
     }
 
-    FILE *fp = fopen(dest, "r+b");
-    if (!fp)
+    FILE *in = fopen(src, "rb");
+    FILE *out = fopen(dest, "wb");
+    if (!in || !out)
         return -1;
 
-    if (isbmp(fp)) {
+    if (isbmp(in)) {
         struct bmp_fheader bfh;    
         struct bmp_iheader bih;    
-        if (!read_bmpheaders(fp, &bfh, &bih))
+        if (!read_bmpheaders(in, &bfh, &bih))
+            return -1;
+        
+        if (!create_bmp_file(out, &bfh, &bih))
             return -1;
 
-        swap_endian(src, size);
+        swap_endian(image, size);
 
-        if (!write_bmp_buf(fp, src, bfh.offset, size))
+        if (!write_bmp_buf(out, image, bfh.offset, size))
             return -1;
     }
-    fclose(fp);
+
+    fclose(in);
+    fclose(out);
 
     return 1;
 }
@@ -279,7 +285,6 @@ swap_endian(unsigned char *image, size_t size)
 /** 
  * writes size bytes starting from the offset of the image buffer
  * pointed to by image into the stream pointed to by fp
- * NOTE: Expects the image to be in little-endian/BGR form
  */
 static int
 write_bmp_buf(FILE *fp, const unsigned char *image, size_t offset, size_t size)

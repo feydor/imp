@@ -4,11 +4,6 @@ Images are defined as arrays of unsigned chars.
 Each image type has an expected endianness.
 Bmp functions expect 24bit color encoding.
 
-int create_image_output_file(const char *src, char* dest)
-    the file pointed to by dest will contain the image headers from the 
-    file pointed to by dest
-    returns 1 if successful, -1 otherwise
-
 int get_image_size(const char *src, size_t *width, size_t height)
     src is a string containing the location of the image file
         must be an existing image file
@@ -26,7 +21,9 @@ int read_image(const char *src, unsigned char *dest, size_t size)
     returns 1 if successful, -1 otherwise 
         src buffer overflow is not checked
 
-int write_image(const unsigned char *src, char *dest, size_t size)
+int write_image(const unsigned char *image, char *src, char *dest, size_t size)
+    the file pointed to by dest will contain the image headers from the file
+    pointed to by src followed by the image data pointed to by image
     returns 1 if successful, -1 otherwise
         src buffer overflow is not checked
 

@@ -54,7 +54,6 @@ int ordered_dithering(unsigned char *src, size_t w, size_t h)
     return 1;
 }
 
-
 /**
  * returns a Bayer matrix of X width and Y height
  * Algorithm for assigning slot (x, y):
@@ -80,6 +79,48 @@ bayer_sqrmat(unsigned char *mat, size_t dim)
             printf(" 1/%lu", dim * dim);
         printf("\n");
     }
+}
+
+/**
+ * returns an array color[] which contains
+ * 1. the unsigned char red at color[0],
+ * 2. the unsigned char blue at color[1],
+ * 3. the unsigned char green ar color[2]
+ */
+static unsigned char*
+color_from_index(unsigned char* src, size_t i)
+{
+    unsigned char color[] = { 0, 0, 0 };
+
+    // sanity check
+    assert(i % 3 < 3);
+    switch (i % 3) {
+        case 0:
+            /* index points to red */
+            color[0] = src[i];
+            color[1] = src[i+1];
+            color[2] = src[i+2];
+            break;
+        case 1:
+            /* index points to green */
+            color[0] = src[i-1];
+            color[1] = src[i];
+            color[2] = src[i+1];
+            break;
+        case 2:
+            /* index points to blue */
+            color[0] = src[i-2];
+            color[1] = src[i-1];
+            color[2] = src[i];
+            break;
+    }
+    return color;
+}
+
+static size_t
+indexat(unsigned char *src, size_t x, size_t y)
+{
+    return (x & 7) + ((y & 7) << 3);
 }
 
 static unsigned
