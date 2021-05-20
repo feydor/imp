@@ -26,22 +26,23 @@ handle_image(options_t *options)
     printf("Self test passed!\n");
     
     /* parse the image into the char buffer */
+    // struct image_t image = { 0 };
     unsigned char *image = NULL;
-    size_t height = 0, width = 0;
+    size_t w = 0, h = 0;
 
-    if (!get_image_size(options->src, &width, &height))
+    if (!get_image_size(options->src, &w, &h))
         perror("get_image_size");
 
-    image = allocate_image_buf(width, height);
+    image = allocate_image_buf(w, h);
 
-    if (!read_image(options->src, image, width * height))
+    if (!read_image(options->src, image, w * h))
         perror("read_image");
 
     // TODO: call image processing routine here
-    // invert_bmp(image, height * width);
-    ordered_dithering(image, width, height);
+    // invert_bmp(image.buf, height * width);
+    // ordered_dithering(image);
     
-    if (!write_image(image, options->src, options->dest, width * height))
+    if (!write_image(image, options->src, options->dest, w * h))
         perror("write_image");
 
     free_image_buf(image);

@@ -6,19 +6,24 @@
 
 #define uchar unsigned char
 
-struct pixel {
+struct pixel_t {
     uchar r;
     uchar g;
     uchar b;
 };
 
-struct image {
-    struct pixel *buf;
+struct image_t {
+    struct pixel_t *buf;
     size_t w;
     size_t h;
 };
 
 /* function prototypes */
-int ordered_dithering(unsigned char *src, size_t w, size_t h);
+int ordered_dithering(struct image_t *image);
+size_t index_at(const struct image_t *image, size_t x, size_t y);
+int setpixel(struct image_t *image, size_t x, size_t y, 
+             struct pixel_t *pixel);
+
+#define PIXEL_FROM_INDEX(image, i) image->buf[i];
 
 #endif
