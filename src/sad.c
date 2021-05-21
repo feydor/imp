@@ -3,6 +3,7 @@
 #include <limits.h> /* for INT_MIN, INT_MAX */
 #include <stddef.h> /* for size_t */
 #include <string.h> /* for memset */
+#include <stdlib.h> /* for abs */
 #include "saru-bytebuf.h"
 
 /* static function prototypes */

@@ -1,10 +1,11 @@
 /* imageio.c - functions to read and write image files */
 #include <assert.h> /* for assert */
+#include <errno.h> /* for errno */
 #include <stdio.h> /* for FILE, freas, fwrite */
 #include <stdint.h> /* for uint16_t */
 #include <stdlib.h> /* for malloc, exit */
-#include <errno.h> /* for errno */
 #include "../include/imageio.h"
+#include "../include/imageproc.h"
 #include "../include/bmp.h"
 
 extern int errno; /* these functions set errno on errors */
@@ -16,41 +17,8 @@ static int read_bmpheaders(FILE *fp, struct bmp_fheader *bfhead,
                                       struct bmp_iheader *bihead);
 static int create_bmp_file(FILE *fp, struct bmp_fheader *bfhead, 
                                       struct bmp_iheader *bihead);
-static int swap_endian(unsigned char *image, size_t size);
-static int write_bmp_buf(FILE *fp, const unsigned char *image, size_t offset, size_t size);
-
-/**
- * Creates an output file at the pathname pointed to by dest
- * containing the file header(s) from the file pointed to by src.
- * Returns 1 if successful, -1 otherwise.
- */
-int
-create_image_output_file(const char *src, char *dest)
-{
-    if (!src || !dest) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    FILE *input = fopen(src, "rb");
-    FILE *output = fopen(dest, "wb");
-    if (!input || !output)
-        return -1;
-
-    if (isbmp(input)) {
-        struct bmp_fheader bfh;
-        struct bmp_iheader bih;
-        if (!read_bmpheaders(input, &bfh, &bih))
-            return -1;        
-        if (!create_bmp_file(output, &bfh, &bih))
-            return -1;
-    }
-
-    fclose(input);
-    fclose(output);
-
-    return 1;
-}
+static int swap_colorendian(int32_t *image, size_t size);
+static int write_bmp_buf(FILE *fp, const int32_t *image, size_t offset, size_t size);
 
 /** 
  * Updates the variables pointed to by width and height
@@ -74,8 +42,7 @@ get_image_size(const char *src, size_t *width, size_t *height)
         struct bmp_fheader bfh;
         struct bmp_iheader bih;
         
-        if (!read_bmpheaders(fp, &bfh, &bih))
-            return -1;
+        read_bmpheaders(fp, &bfh, &bih);
 
         print_bih(&bih);
 
@@ -92,14 +59,15 @@ get_image_size(const char *src, size_t *width, size_t *height)
 }
 
 /**
- * Allocates an unsigned char buffer of height * width bytes.
+ * Allocates a buffer of height * width bytes.
  * Returns a pointer to the new memory if successful, NULL otherwise.
+ * NOTE: Returned pointer must be cast to an appropriate type.
  */
-unsigned char *
-allocate_image_buf(size_t height, size_t width)
+int32_t *
+allocate_image_buf(size_t size)
 {
-    unsigned char *buf;
-    buf = malloc(height * width); 
+    int32_t *buf = NULL;
+    buf = (int32_t *)malloc(size); 
     return buf;
 }
 
@@ -109,7 +77,7 @@ allocate_image_buf(size_t height, size_t width)
  * Returns 1 if successful, -1 otherwise.
  **/
 int
-read_image(const char *src, unsigned char *dest, size_t size)
+read_image(const char *src, int32_t *dest, size_t size)
 {
     if (!src || !dest) {
         errno = EINVAL;
@@ -121,21 +89,19 @@ read_image(const char *src, unsigned char *dest, size_t size)
         return -1;
 
     if (isbmp(fp)) {
-        struct bmp_fheader bfh;
-        struct bmp_iheader bih;
-        if (!read_bmpheaders(fp, &bfh, &bih))
-            return -1;
-        
+        /* parses bmp_headers to get the offset to the image data */
+        struct bmp_fheader bfh = {0};    
+        struct bmp_iheader bih = {0};    
+        read_bmpheaders(fp, &bfh, &bih);
         print_bfh(&bfh);
-
         const int offset = bfh.offset;
+
         fseek(fp, offset, SEEK_SET);
         fread(dest, size, 1, fp);
-        swap_endian(dest, size);
+        swap_colorendian(dest, size);
     }
     
     fclose(fp);
-
     return 1;
 }
 
@@ -146,7 +112,7 @@ read_image(const char *src, unsigned char *dest, size_t size)
  * NOTE: the image pointed to by src must already exist
  */
 int
-write_image(unsigned char *image, char *src, char *dest, size_t size)
+write_image(int32_t *image, char *src, char *dest, size_t size)
 {
     if (!image || !src || !dest) {
         errno = EINVAL;
@@ -159,23 +125,19 @@ write_image(unsigned char *image, char *src, char *dest, size_t size)
         return -1;
 
     if (isbmp(in)) {
-        struct bmp_fheader bfh;    
-        struct bmp_iheader bih;    
-        if (!read_bmpheaders(in, &bfh, &bih))
-            return -1;
-        
-        if (!create_bmp_file(out, &bfh, &bih))
-            return -1;
+        /* reads and then writes bmp_headers to the file at dest */
+        struct bmp_fheader bfh = {0};    
+        struct bmp_iheader bih = {0};    
+        read_bmpheaders(in, &bfh, &bih);
+        create_bmp_file(out, &bfh, &bih);
 
-        swap_endian(image, size);
-
-        if (!write_bmp_buf(out, image, bfh.offset, size))
-            return -1;
+        /* swaps image back to little-endian and writes it */
+        swap_colorendian(image, size);
+        write_bmp_buf(out, image, bfh.offset, size);
     }
 
     fclose(in);
     fclose(out);
-
     return 1;
 }
 
@@ -183,7 +145,7 @@ write_image(unsigned char *image, char *src, char *dest, size_t size)
  * frees the memory pointed to by image and sets it to NULL
  */
 void
-free_image_buf(unsigned char *image)
+free_image_buf(int32_t *image)
 {
     free(image); /* free(NULL) is valid */
     image = NULL;
@@ -208,10 +170,7 @@ isbmp(FILE *fp)
 static uint16_t
 read_ftype(FILE *fp)
 {
-    if (!fp) {
-        errno = EINVAL;
-        return -1;
-    }
+    assert(fp && "Is validated by the caller.");
 
     uint16_t ftype = 0;
     fread(&ftype, sizeof(ftype), 1, fp);
@@ -220,16 +179,13 @@ read_ftype(FILE *fp)
 }
 
 /* reads the bmp headers from the file pointed to by fp 
- * returns the fp to the begining of the gile when done
+ * returns the fp to the beginning of the file when done
  */
 static int
 read_bmpheaders(FILE *fp, struct bmp_fheader *bfhead, 
                           struct bmp_iheader *bihead)
 {
-    if (!fp || !bfhead || !bihead) {
-        errno = EINVAL;
-        return -1;
-    }
+    assert(fp && "Is validated by the caller");
 
     fread(&bfhead->ftype, sizeof(uint16_t), 1, fp);
     fread(&bfhead->fsize, sizeof(uint32_t), 1, fp);
@@ -246,13 +202,7 @@ static int
 create_bmp_file(FILE *fp, struct bmp_fheader *bfhead, 
                           struct bmp_iheader *bihead) 
 {
-    if (!fp || !bfhead || !bihead) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    // sanity check
-    assert(sizeof(struct bmp_iheader) == BIHEADER_SIZE);
+    assert(fp && "Is validated by the caller");
 
     fwrite(&bfhead->ftype, sizeof(uint16_t), 1, fp);
     fwrite(&bfhead->fsize, sizeof(uint32_t), 1, fp);
@@ -263,20 +213,15 @@ create_bmp_file(FILE *fp, struct bmp_fheader *bfhead,
     return 1;
 }
 
-/* swap the least-significant byte with the most-significant */
+/* swaps a BGR pixel to an RGB pixel, ignoring the leading unused byte */
 static int
-swap_endian(unsigned char *image, size_t size)
+swap_colorendian(int32_t *image, size_t size)
 {
-    if (!image) {
-        errno = EINVAL;
-        return -1;
-    }
+    assert(image && "Is validated by the caller.");
 
-    unsigned char temp;
-    for (size_t i = 0; i < size; i += 3) {
-        temp = image[i];
-        image[i] = image[i + 2];
-        image[i + 2] = temp;
+    int32_t *pxl = image;
+    for (size_t i = 0; i < size; ++i, ++pxl) {
+        *pxl = (int32_t)swapbytes((uint32_t)*pxl, 1, 3);
     }
 
     return 1;
@@ -287,12 +232,10 @@ swap_endian(unsigned char *image, size_t size)
  * pointed to by image into the stream pointed to by fp
  */
 static int
-write_bmp_buf(FILE *fp, const unsigned char *image, size_t offset, size_t size)
+write_bmp_buf(FILE *fp, const int32_t *image, size_t offset, size_t size)
 {
-    if (!fp || !image) {
-        errno = EINVAL;
-        return -1;
-    }
+    assert(fp && "Is validated by the caller.");
+    assert(image && "Is validated by the caller.");
 
     fseek(fp, offset, SEEK_SET);
     fwrite(image, size, 1, fp);

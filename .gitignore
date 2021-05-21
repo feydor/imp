@@ -1,6 +1,7 @@
 bin/
 build/
 subprojects/*/
+.idea/
 
 # build artifacts
 *.rct 

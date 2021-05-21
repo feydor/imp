@@ -1,11 +1,12 @@
 project('sadx64', 'c',
   version : '0.1',
-  default_options : ['warning_level=3'])
+  default_options : ['warning_level=3', 'c_args=-Wall', 'c_link_args=-lasan', 'c_std=c11'])
 
 yasm_src = ['src/sad.s']
 
 yasm = find_program('yasm')
 cc = meson.get_compiler('c')
+
 math_dep = cc.find_library('m', required : false)
 libsaru_buf_dep = dependency(
   'libsaru-buf',

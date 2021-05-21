@@ -26,26 +26,25 @@ handle_image(options_t *options)
     printf("Self test passed!\n");
     
     /* parse the image into the char buffer */
-    // struct image_t image = { 0 };
-    unsigned char *image = NULL;
-    size_t w = 0, h = 0;
+    struct image32_t image = { 0 };
 
-    if (!get_image_size(options->src, &w, &h))
+    if (!get_image_size(options->src, &image.w, &image.h))
         perror("get_image_size");
 
-    image = allocate_image_buf(w, h);
+    image.buf = allocate_image_buf(image.w * image.h);
 
-    if (!read_image(options->src, image, w * h))
+    if (!read_image(options->src, image.buf, image.w * image.h))
         perror("read_image");
 
     // TODO: call image processing routine here
     // invert_bmp(image.buf, height * width);
     // ordered_dithering(image);
     
-    if (!write_image(image, options->src, options->dest, w * h))
+    if (!write_image(image.buf, options->src, options->dest, 
+                image.w * image.h))
         perror("write_image");
 
-    free_image_buf(image);
+    free_image_buf(image.buf);
     
 	return 1;
 }
@@ -66,3 +65,4 @@ valid_options(options_t *options)
 
     return 1;
 }
+

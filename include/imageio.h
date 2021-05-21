@@ -4,9 +4,9 @@
 
 /* function prototypes */
 int get_image_size(const char *src, size_t *width, size_t *height);
-unsigned char * allocate_image_buf(size_t height, size_t width);
-int read_image(const char *src, unsigned char *dest, size_t size);
-int write_image(unsigned char *img, char *src, char *dest, size_t size);
-void free_image_buf(unsigned char *image);
+int32_t * allocate_image_buf(size_t size);
+int read_image(const char *src, int32_t *dest, size_t size);
+int write_image(int32_t *img, char *src, char *dest, size_t size);
+void free_image_buf(int32_t *image);
 
 #endif
