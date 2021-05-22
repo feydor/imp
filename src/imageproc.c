@@ -12,9 +12,9 @@
 extern int errno; /* these functions set errno on errors */
 
 /* static function protoypes */
-static void bayer_sqrmat(unsigned *mat, size_t dim);
-static unsigned reverse(unsigned x);
-static unsigned interleave(unsigned x, unsigned y, size_t n);
+static void bayer_sqrmat(int32_t *mat, size_t dim);
+static int32_t reverse(uint32_t x);
+static uint32_t interleave(uint16_t x, uint16_t y);
 static int32_t closestcolor(int32_t color);
 static int32_t diff(int32_t a, int32_t b);
 static int32_t sumofsquares(int32_t a, int32_t b, int32_t c);
@@ -27,20 +27,21 @@ int ordered_dithering(struct image32_t *image)
     if (!image || !image->buf)
         return -1;
 
-    unsigned thresholds[] = { 256/4, 256/4, 256/4 };
+    int32_t thresholds[] = { 256/4, 256/4, 256/4 };
 
     /* using an 8x8 Bayer matrix */
     const size_t dim = 8*8;
-    unsigned mat[dim];
+    int32_t mat[dim];
     bayer_sqrmat(mat, 8);
 
+    /* iterate over */
     unsigned factor = 0, r = 0, g = 0, b = 0;
     int32_t color = 0;
     int32_t closest = 0;
     for (size_t y = 0; y < image->h; ++y)
-        for (size_t x = 0; x < image->w; x += 4) {
+        for (size_t x = 0; x < image->w / PXL_SIZE; ++x) {
             factor = mat[(x & 7) + ((y & 7) << 3)];
-            color = PXL_FROM_IDX(image, index_at(image, x, y));
+            color = image->buf[index_at(image, x, y)];
 
             // TODO: Verify these calculations
             r = R_FROM_PXL(color) + factor * thresholds[0];
@@ -62,15 +63,20 @@ int ordered_dithering(struct image32_t *image)
  * 3. Floating point divide the result by N (x * y)
  */
 static void
-bayer_sqrmat(unsigned *mat, size_t dim)
+bayer_sqrmat(int32_t *mat, size_t dim)
 {
     printf(" X=%lu, Y=%lu:\n", dim, dim);
     for (size_t y = 0; y < dim; ++y) {
         printf("    ");
         for (size_t x = 0; x < dim; ++x) {
-            unsigned xc = x ^ y, yc = y;
-            unsigned res = 0; //, mask = dim - 1;
-            res = reverse(interleave(xc, yc, dim));
+            uint32_t xc = x ^ y, yc = y;
+            uint32_t res = 0;
+            uint32_t mask = 2;
+            for(uint32_t bit = 0; bit < 6; --mask) {
+                res |= ((yc >> mask) & 1) << bit++;
+                res |= ((xc >> mask) & 1) << bit++;
+            }
+            // res = reverse(interleave(xc, yc));
             mat[x + y * dim] = res;
             printf("%4d", res);
         }
@@ -135,7 +141,7 @@ index_at(const struct image32_t *image, size_t x, size_t y)
  * NOTE:i and j must be less than 4
  *      a must be non-negative
  */
-uint32_t
+int32_t
 swapbytes(uint32_t a, unsigned i, unsigned j)
 {
     if (i > 3 || j > 3)
@@ -160,15 +166,16 @@ sumofsquares(int32_t a, int32_t b, int32_t c)
     return a*a + b*b + c*c;
 }
 
-static unsigned
-reverse(unsigned x) {
-   unsigned y = 0;
-   for (size_t i = 0; i < 7 ; ++i) {
-       y |= x & 1; // copy the set bits into tmp
-       x >>= 1; 
-       y <<= 1;
+static int32_t
+reverse(uint32_t x) {
+   uint32_t y = x; // y holds the result; 
+   int32_t s = sizeof(y) * CHAR_BIT - 1; // extra shift needed at end
+   for (x >>= 1; x; x >>= 1) {
+       y <<=1;
+       y |= x & 1;
+       s--;
    }
-   return y;
+   return y << s; 
 }
 
 /**
@@ -176,13 +183,12 @@ reverse(unsigned x) {
  * which is composed of the bits of x and y interleaved together
  * starting with the first bit of x
  */
-static unsigned
-interleave(unsigned x, unsigned y, size_t n)
+static uint32_t
+interleave(uint16_t x, uint16_t y)
 {
-    unsigned z = 0;
-    for (size_t i = 0; i < n; ++i) { 
-        z |= ((x & (1 << i)) << i);
-        z |= ((y & (1 << i)) << (i + 1));
+    uint32_t z = 0;
+    for (size_t i = 0; i < sizeof(x) * CHAR_BIT; ++i) { 
+        z |= (x & 1U << i) << i | (y & 1U << i) << (i + 1);
     }
     return z;
 }

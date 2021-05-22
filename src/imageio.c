@@ -221,7 +221,7 @@ swap_colorendian(int32_t *image, size_t size)
 
     int32_t *pxl = image;
     for (size_t i = 0; i < size; ++i, ++pxl) {
-        *pxl = (int32_t)swapbytes((uint32_t)*pxl, 1, 3);
+        *pxl = swapbytes((uint32_t)*pxl, 1, 3);
     }
 
     return 1;
