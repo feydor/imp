@@ -39,7 +39,7 @@ int ordered_dithering(struct image32_t *image)
     int32_t color = 0;
     int32_t closest = 0;
     for (size_t y = 0; y < image->h; ++y)
-        for (size_t x = 0; x < image->w / PXL_SIZE; ++x) {
+        for (size_t x = 0; x < image->w / PXLSIZE; ++x) {
             factor = mat[(x & 7) + ((y & 7) << 3)];
             color = image->buf[index_at(image, x, y)];
 

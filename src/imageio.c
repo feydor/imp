@@ -66,9 +66,7 @@ get_image_size(const char *src, size_t *width, size_t *height)
 int32_t *
 allocate_image_buf(size_t size)
 {
-    int32_t *buf = NULL;
-    buf = (int32_t *)malloc(size); 
-    return buf;
+    return (int32_t *)malloc(size); 
 }
 
 /**
@@ -219,9 +217,10 @@ swap_colorendian(int32_t *image, size_t size)
 {
     assert(image && "Is validated by the caller.");
 
-    int32_t *pxl = image;
-    for (size_t i = 0; i < size; ++i, ++pxl) {
-        *pxl = swapbytes((uint32_t)*pxl, 1, 3);
+    printf("swap_colorendian size: %lu\n", size);
+
+    for (size_t i = 0; i < size/4; i++) {
+        image[i] = swapbytes((uint32_t)image[i], 1, 3);
     }
 
     return 1;

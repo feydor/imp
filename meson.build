@@ -1,6 +1,6 @@
 project('sadx64', 'c',
   version : '0.1',
-  default_options : ['warning_level=3', 'c_args=-Wall', 'c_link_args=-lasan', 'c_std=c11'])
+  default_options : ['warning_level=3', 'c_link_args=-lasan', 'c_std=c11'])
 
 yasm_src = ['src/sad.s']
 
@@ -29,4 +29,5 @@ exe = executable('sadx64',
            sources: src_c,
            include_directories: incl_dir,
            dependencies: deps,
+          c_args: ['-Wall'],
            install : true)

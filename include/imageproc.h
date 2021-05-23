@@ -6,7 +6,7 @@
 #include <inttypes.h> /* for int32_t */
 
 #define uchar unsigned char
-#define PXL_SIZE 4
+#define PXLSIZE 4
 
 struct image32_t {
     int32_t *buf; /* a buffer of 32b size pixels (2's compliment)
@@ -31,5 +31,6 @@ int32_t swapbytes(uint32_t a, unsigned i, unsigned j);
 #define R_FROM_PXL(pixel) ( pixel & 0xFF0000 )
 #define G_FROM_PXL(pixel) ( pixel & 0x00FF00 )
 #define B_FROM_PXL(pixel) ( pixel & 0x0000FF )
+#define IMGSIZE(imagep) { (imagep->w * imagep->h) / 4 }
 
 #endif
