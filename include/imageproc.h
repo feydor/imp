@@ -24,6 +24,7 @@ struct image32_t {
 int ordered_dithering(struct image32_t *image);
 size_t index_at(const struct image32_t *image, size_t x, size_t y);
 int setpixel(struct image32_t *image, int32_t pixel, size_t x, size_t y);
+int32_t closestcolor(int32_t color, int32_t *pal, size_t size);
 int32_t swapbytes(uint32_t a, unsigned i, unsigned j);
 
 #define WPXLS_FROM_WBYTES(wbytes) ( wbytes / 4 )

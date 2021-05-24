@@ -15,7 +15,6 @@ extern int errno; /* these functions set errno on errors */
 static void bayer_sqrmat(int32_t *mat, size_t dim);
 static int32_t reverse(uint32_t x);
 static uint32_t interleave(uint16_t x, uint16_t y);
-static int32_t closestcolor(int32_t color);
 static int32_t diff(int32_t a, int32_t b);
 static int32_t sumofsquares(int32_t a, int32_t b, int32_t c);
 
@@ -28,6 +27,14 @@ int ordered_dithering(struct image32_t *image)
         return -1;
 
     int32_t thresholds[] = { 256/4, 256/4, 256/4 };
+    int32_t pal[] = {
+        0x000000, 0x008000, 0x00FF00,
+        0x0000FF, 0x0080FF, 0x00FFFF,
+        0x800000, 0x808000, 0x80FF00,
+        0x8000FF, 0x8080FF, 0x80FFFF,
+        0xFF0000, 0xFF8000, 0xFFFF00,
+        0xFF00FF, 0xFF80FF, 0xFFFFFF
+    };
 
     /* using an 8x8 Bayer matrix */
     const size_t dim = 8*8;
@@ -44,7 +51,6 @@ int ordered_dithering(struct image32_t *image)
             color = image->buf[index_at(image, x, y)];
 
             // TODO: Verify these calculations
-            /*
             color = color ^ ((color ^ g) & 0x00FF00);
             r = R_FROM_PXL(color) + factor * thresholds[0];
             g = G_FROM_PXL(color) + factor * thresholds[1];
@@ -54,9 +60,8 @@ int ordered_dithering(struct image32_t *image)
             color = color ^ ((color ^ r) & 0xFF0000);
             color = color ^ ((color ^ g) & 0x00FF00);
             color = color ^ ((color ^ b) & 0x0000FF);
-            */
     
-            closest = closestcolor(color);
+            closest = closestcolor(color, pal, sizeof(pal));
             setpixel(image, closest, x, y);
         }
 
@@ -102,22 +107,13 @@ setpixel(struct image32_t *image, int32_t pixel, size_t x, size_t y)
     return 1;
 }
 
-static int32_t
-closestcolor(int32_t color)
+int32_t
+closestcolor(int32_t color, int32_t *pal, size_t size)
 {
     // Use euclidean RGB distance 
-    int32_t pal[] = {
-        0x000000, 0x008000, 0x00FF00,
-        0x0000FF, 0x0080FF, 0x00FFFF,
-        0x800000, 0x808000, 0x80FF00,
-        0x8000FF, 0x8080FF, 0x80FFFF,
-        0xFF0000, 0xFF8000, 0xFFFF00,
-        0xFF00FF, 0xFF80FF, 0xFFFFFF
-    };
-
     int32_t d = 0, min = INT32_MAX, res;
     int32_t r = 0, g = 0, b = 0;
-    for (size_t i = 0; i < sizeof(pal); ++i) {
+    for (size_t i = 0; i < size; ++i) {
         r = (pal[i] & 0xFF0000) >> 16;
         g = (pal[i] & 0x00FF00) >> 8;
         b = pal[i] & 0x0000FF;
