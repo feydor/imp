@@ -38,7 +38,7 @@ handle_image(options_t *options)
 
     // TODO: call image processing routine here
     // invert_bmp(image.buf, height * width);
-    // ordered_dithering(&image);
+    ordered_dithering(&image);
     
     if (!write_image(image.buf, options->src, options->dest, 
                 image.w * image.h))

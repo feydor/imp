@@ -44,9 +44,17 @@ int ordered_dithering(struct image32_t *image)
             color = image->buf[index_at(image, x, y)];
 
             // TODO: Verify these calculations
+            /*
+            color = color ^ ((color ^ g) & 0x00FF00);
             r = R_FROM_PXL(color) + factor * thresholds[0];
             g = G_FROM_PXL(color) + factor * thresholds[1];
             b = B_FROM_PXL(color) + factor * thresholds[2];
+
+            color = 0;
+            color = color ^ ((color ^ r) & 0xFF0000);
+            color = color ^ ((color ^ g) & 0x00FF00);
+            color = color ^ ((color ^ b) & 0x0000FF);
+            */
     
             closest = closestcolor(color);
             setpixel(image, closest, x, y);
@@ -114,9 +122,9 @@ closestcolor(int32_t color)
         g = (pal[i] & 0x00FF00) >> 8;
         b = pal[i] & 0x0000FF;
         d = sqrt(sumofsquares(
-                    diff(r, R_FROM_PXL(color)),
-                    diff(g, G_FROM_PXL(color)),
-                    diff(b, B_FROM_PXL(color))
+                    diff(r, (color & 0xFF0000) >> 16),
+                    diff(g, (color & 0x00FF00) >> 8),
+                    diff(b, (color & 0x0000FF))
             ));
         if (d < min) {
            min = d;
@@ -129,7 +137,7 @@ closestcolor(int32_t color)
 size_t
 index_at(const struct image32_t *image, size_t x, size_t y)
 {
-    return x + y * WPXLS_FROM_WBYTES(image->w);
+    return x + y * image->w / PXLSIZE;
 }
 
 /*
