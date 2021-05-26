@@ -4,7 +4,7 @@
 #include <limits.h> /* for UINT_MAX */ 
 #include <math.h> /* for sqrt */
 #include <stdint.h> /* for uint16_t */
-#include <stdlib.h> /* for malloc, exit */
+#include <stdlib.h> /* for malloc, exit, abs */
 #include <stdio.h> /* for printf */
 #include "../include/imageproc.h"
 #include "../include/bmp.h"
@@ -13,10 +13,6 @@ extern int errno; /* these functions set errno on errors */
 
 /* static function protoypes */
 static void bayer_sqrmat(int32_t *mat, size_t dim);
-static int32_t reverse(uint32_t x);
-static uint32_t interleave(uint16_t x, uint16_t y);
-static int32_t diff(int32_t a, int32_t b);
-static int32_t sumofsquares(int32_t a, int32_t b, int32_t c);
 
 /**
  * ordered dithering with Bayer matrices
@@ -49,19 +45,19 @@ int ordered_dithering(struct image32_t *image)
         for (size_t x = 0; x < image->w / PXLSIZE; ++x) {
             factor = mat[(x & 7) + ((y & 7) << 3)];
             color = image->buf[index_at(image, x, y)];
+            printf("color = 0x%08X\n", color);
 
             // TODO: Verify these calculations
-            color = color ^ ((color ^ g) & 0x00FF00);
             r = R_FROM_PXL(color) + factor * thresholds[0];
             g = G_FROM_PXL(color) + factor * thresholds[1];
             b = B_FROM_PXL(color) + factor * thresholds[2];
 
-            color = 0;
+            color = INT32_MAX;
             color = color ^ ((color ^ r) & 0xFF0000);
             color = color ^ ((color ^ g) & 0x00FF00);
             color = color ^ ((color ^ b) & 0x0000FF);
     
-            closest = closestcolor(color, pal, sizeof(pal));
+            closest = closestfrompal(color, pal, sizeof(pal)/sizeof(pal[0]));
             setpixel(image, closest, x, y);
         }
 
@@ -108,20 +104,23 @@ setpixel(struct image32_t *image, int32_t pixel, size_t x, size_t y)
 }
 
 int32_t
-closestcolor(int32_t color, int32_t *pal, size_t size)
+closestfrompal(int32_t color, int32_t *pal, size_t n)
 {
     // Use euclidean RGB distance 
-    int32_t d = 0, min = INT32_MAX, res;
+    int32_t d = INT32_MAX - 1, min = INT32_MAX, res = INT32_MAX;
     int32_t r = 0, g = 0, b = 0;
-    for (size_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         r = (pal[i] & 0xFF0000) >> 16;
         g = (pal[i] & 0x00FF00) >> 8;
         b = pal[i] & 0x0000FF;
-        d = sqrt(sumofsquares(
-                    diff(r, (color & 0xFF0000) >> 16),
-                    diff(g, (color & 0x00FF00) >> 8),
-                    diff(b, (color & 0x0000FF))
-            ));
+        d = sqrt( pow(abs(r - ((color & 0xFF0000) >> 16)), 2) +
+                  pow(abs(g - ((color & 0x00FF00) >> 8)), 2) +
+                  pow(abs(b - (color & 0x0000FF)), 2)
+            );
+
+        if (d == 0)
+            return (r << 16) | (g << 8) | b;
+
         if (d < min) {
            min = d;
            res = (r << 16 ) | (g << 8) | b;
@@ -133,7 +132,7 @@ closestcolor(int32_t color, int32_t *pal, size_t size)
 size_t
 index_at(const struct image32_t *image, size_t x, size_t y)
 {
-    return x + y * image->w / PXLSIZE;
+    return x + y * image->w/PXLSIZE;
 }
 
 /*
@@ -158,41 +157,3 @@ swapbytes(uint32_t a, unsigned i, unsigned j)
     return a ^ ((temp << CHAR_BIT*i) | (temp << CHAR_BIT*j));
 }
 
-static int32_t
-diff(int32_t a, int32_t b)
-{
-    return (a > b) ? a - b : b - a;
-}
-
-static int32_t
-sumofsquares(int32_t a, int32_t b, int32_t c)
-{
-    return a*a + b*b + c*c;
-}
-
-static int32_t
-reverse(uint32_t x) {
-   uint32_t y = x; // y holds the result; 
-   int32_t s = sizeof(y) * CHAR_BIT - 1; // extra shift needed at end
-   for (x >>= 1; x; x >>= 1) {
-       y <<=1;
-       y |= x & 1;
-       s--;
-   }
-   return y << s; 
-}
-
-/**
- * returns an unsigned number of size 2n bits
- * which is composed of the bits of x and y interleaved together
- * starting with the first bit of x
- */
-static uint32_t
-interleave(uint16_t x, uint16_t y)
-{
-    uint32_t z = 0;
-    for (size_t i = 0; i < sizeof(x) * CHAR_BIT; ++i) { 
-        z |= (x & 1U << i) << i | (y & 1U << i) << (i + 1);
-    }
-    return z;
-}

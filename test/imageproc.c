@@ -4,12 +4,12 @@
 #include "../include/imageproc.h"
 
 /* test prototypes */
-void test_closestcolor(void);
+void test_closestfrompal(void);
 
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_closestcolor);
+    RUN_TEST(test_closestfrompal);
 }
 
 void setUp(void)
@@ -22,7 +22,7 @@ void tearDown(void)
     // clean stuff up here
 }
 
-void test_closestcolor(void)
+void test_closestfrompal(void)
 {
     int32_t pal[] = {
         0x000000, 0x008000, 0x00FF00,
@@ -35,6 +35,20 @@ void test_closestcolor(void)
     int32_t closest = 0xFFFFFF;
 
     // all black returns all black
-    closest = closestcolor(0x000000, pal, sizeof(pal));
-    TEST_ASSERT_EQUAL(closest, 0x000000);
+    closest = closestfrompal(0x000000, pal, sizeof(pal)/sizeof(pal[0]));
+    TEST_ASSERT_EQUAL(0x000000, closest);
+    
+    // all white returns all white
+    closest = closestfrompal(0xFFFFFF, pal, sizeof(pal)/sizeof(pal[0]));
+    TEST_ASSERT_EQUAL(0xFFFFFF, closest);
+    
+    // black off by 1 returns black
+    closest = closestfrompal(0x000001, pal, sizeof(pal)/sizeof(pal[0]));
+    TEST_ASSERT_EQUAL(0x000000, closest);
+
+    // inbetween two pallette colors returns the first one
+    closest = closestfrompal(0x004000, pal, sizeof(pal)/sizeof(pal[0]));     
+    TEST_ASSERT_EQUAL(0x000000, closest); 
+    closest = closestfrompal(0x004F00, pal, sizeof(pal)/sizeof(pal[0]));     
+    TEST_ASSERT_EQUAL(0x008000, closest); 
 }

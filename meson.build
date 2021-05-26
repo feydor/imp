@@ -29,13 +29,13 @@ incl_dir = include_directories('include')
 deps = [math_dep, libsaru_buf_dep]
 src_c += yasm_objs
 
-#exe = executable('sadx64',
-#    sources: src_c,
-#    include_directories: incl_dir,
-#    dependencies: deps,
-#    c_args: ['-Wall'],
-#    install : true
-#)
+exe = executable('sadx64',
+    sources: src_c,
+    include_directories: incl_dir,
+    dependencies: deps,
+    c_args: ['-Wall'],
+    install : true
+)
 
 # unit tests
 imageproc_test = executable('imageproc-test',
