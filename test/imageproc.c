@@ -1,5 +1,6 @@
 /* test/imageproc.c */
 #include <unity.h>
+#include <stdint.h> /* for int32_t */
 #include <stdlib.h> /* for malloc */
 
 #include "../include/imageproc.h"
@@ -7,12 +8,14 @@
 /* test prototypes */
 void test_closestfrompal(void);
 void test_pixelat(void);
+void test_bayer_sqrmat(void);
 
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_closestfrompal);
     RUN_TEST(test_pixelat);
+    RUN_TEST(test_bayer_sqrmat);
 }
 
 void setUp(void)
@@ -105,4 +108,25 @@ void test_pixelat(void)
     TEST_ASSERT_EQUAL(res[3], 3);
 
     free(img.buf);
+}
+
+void test_bayer_sqrmat(void)
+{
+    /* generate an 8x8 Bayer matrix */
+    size_t dim = 8;
+    int32_t mat[dim * dim];
+    bayer_sqrmat(mat, dim);
+
+    int32_t ref[] = {
+        0, 32, 8, 40, 2, 34, 10, 42,
+        48, 16, 56, 24, 50, 18, 58, 26,
+        12, 44, 4, 36, 14, 46, 6, 38, 
+        60, 28, 52, 20, 62, 30, 54, 22, 
+        3, 35, 11, 43, 1, 33, 9, 41, 
+        51, 19, 59, 27, 49, 17, 57, 25, 
+        15, 47, 7, 39, 13, 45, 5, 37, 
+        63, 31, 55, 23, 61, 29, 53, 21
+    };
+
+    TEST_ASSERT_EQUAL_INT32_ARRAY(ref, mat, sizeof(mat) / sizeof(mat[0]));
 }

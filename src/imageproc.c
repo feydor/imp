@@ -11,9 +11,6 @@
 
 extern int errno; /* these functions set errno on errors */
 
-/* static function protoypes */
-static void bayer_sqrmat(int32_t *mat, size_t dim);
-
 /**
  * ordered dithering with Bayer matrices
  */
@@ -41,22 +38,25 @@ int ordered_dithering(struct image32_t *image)
     unsigned factor = 0, r = 0, g = 0, b = 0;
     int32_t color = 0;
     int32_t closest = 0;
-    for (size_t i = 0; i < image->h * image->w / PXLSIZE; ++i) {
-        factor = mat[i % 8];
+    for (size_t i = 0; i < image->h * (image->w / PXLSIZE); ++i) {
+        factor = mat[i % (dim*dim)];
         color = *(image->buf + i);
         printf("color = 0x%08X\n", color);
 
         r = R_FROM_PXL(color) + factor * thresholds[0];
         g = G_FROM_PXL(color) + factor * thresholds[1];
         b = B_FROM_PXL(color) + factor * thresholds[2];
-        
+        printf("r,g,b = 0x%08X, 0x%08X, 0x%08X\n", R_FROM_PXL(color), G_FROM_PXL(color), B_FROM_PXL(color));
         /*
-        color = INT32_MAX; // set to all 1's
+        
+        color = INT32_MAX; // preserve the leftmost two bytes
         color = color ^ ((color ^ r) & 0xFF0000);
         color = color ^ ((color ^ g) & 0x00FF00);
         color = color ^ ((color ^ b) & 0x0000FF);
+        printf("new color = 0x%08X\n", color);
     
         closest = closestfrompal(color, pal, sizeof(pal)/sizeof(pal[0]));
+        printf("closest = 0x%08X\n", closest);
         */
         *(image->buf + i) = color;
     }
@@ -70,7 +70,7 @@ int ordered_dithering(struct image32_t *image)
  * 2. Interleave their bits in reverse order,
  * 3. Floating point divide the result by N (x * y)
  */
-static void
+void
 bayer_sqrmat(int32_t *mat, size_t dim)
 {
     printf(" X=%lu, Y=%lu:\n", dim, dim);
@@ -102,6 +102,9 @@ setpixel(struct image32_t *image, int32_t pixel, size_t x, size_t y)
     return 1;
 }
 
+/**
+ * ignores the two leftmost bytes (MSB + it's neighbor)
+ */
 int32_t
 closestfrompal(int32_t color, int32_t *pal, size_t n)
 {

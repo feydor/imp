@@ -4,6 +4,7 @@
 #include <stdio.h> /* for FILE, freas, fwrite */
 #include <stdint.h> /* for uint16_t */
 #include <stdlib.h> /* for malloc, exit */
+#include <string.h> /* for memset */
 #include "../include/imageio.h"
 #include "../include/imageproc.h"
 #include "../include/bmp.h"
@@ -19,8 +20,8 @@ static int create_bmp_file(FILE *fp, struct bmp_fheader *bfhead,
                                       struct bmp_iheader *bihead);
 static int swap_colorendian(int32_t *image, size_t size);
 static int write_bmp_buf(FILE *fp, const int32_t *image, size_t offset, size_t size);
-static int normalizepxl(int32_t *buf, size_t bufsize);
-static int denormalizepxl(int32_t *buf, size_t bufsize);
+static int widen(int32_t *dest, int8_t *src, size_t size);
+static int shorten(int8_t *dest, int32_t *src, size_t size);
 
 /** 
  * Updates the variables pointed to by width and height
@@ -88,6 +89,8 @@ read_image(const char *src, int32_t *dest, size_t size)
     if (!fp)
         return -1;
 
+    int8_t *tempbuf = malloc(size);
+
     if (isbmp(fp)) {
         /* parses bmp_headers to get the offset to the image data */
         struct bmp_fheader bfh = {0};    
@@ -97,10 +100,13 @@ read_image(const char *src, int32_t *dest, size_t size)
         const int offset = bfh.offset;
 
         fseek(fp, offset, SEEK_SET);
-        fread(dest, size, 1, fp);
-        swap_colorendian(dest, size);
-        // normalizepxl(dest, size);
+        fread(tempbuf, size, 1, fp);
+
+        widen(dest, tempbuf, size);
+        // swap_colorendian(dest, size);
     }
+    
+    free(tempbuf);
     
     fclose(fp);
     return 1;
@@ -133,8 +139,8 @@ write_image(int32_t *image, char *src, char *dest, size_t size)
         create_bmp_file(out, &bfh, &bih);
 
         /* swaps image back to little-endian and writes it */
-        // denormalizepxl(image, size);
-        swap_colorendian(image, size);
+        // swap_colorendian(image, size);
+        shorten(tempbuf, image, size);
         write_bmp_buf(out, image, bfh.offset, size);
     }
 
@@ -250,30 +256,50 @@ write_bmp_buf(FILE *fp, const int32_t *image, size_t offset, size_t size)
  * shift bytes to account for 24bit RGB in a 32bit element
  */
 static int
-normalizepxl(int32_t *buf, size_t bufsize)
+widen(int32_t *dest, int8_t *src, size_t size)
 {
-    int32_t msb = 0;
-    for (size_t i = 0; i < bufsize / sizeof(buf[0]); ++i) {
-        msb = (buf[i] & 0xFF000000) >> 24; 
-        buf[i] &= 0x00FFFFFF;
-        
-        if (i+1 < bufsize / sizeof(buf[0]))
-            buf[i+1] = (buf[i+1] & 0xFF00FFFF) | (msb << 16);
+    int count = 0;
+    uint32_t r = 0, g = 0, b = 0; 
+    printf("widen: size = %ld\n", size);
+    for (size_t i = 0; i < size; i += 3) {
+        if (count < size/4) {
+            b = (uint32_t)(src[i] & 0x000000FF);
+            g = (uint32_t)(src[i+1] & 0x000000FF);
+            r = (uint32_t)(src[i+2] & 0x000000FF);
+
+            dest[count++] = (r << 16) | (g << 8) | b;
+            //  printf("0x%08X\n", buf[count - 1]);
+        }
     }
-    return 1;
+
+    printf("widen: buf_count = %d\n", count);
+
+    return count;
 }
 
-static int
-denormalizepxl(int32_t *buf, size_t bufsize)
+static int 
+shorten(int8_t *dest, int32_t *src, size_t size)
 {
-    int32_t oldmsb = 0;
-    for (size_t i = 0; i < bufsize / sizeof(buf[0]); ++i) {
-        if (i+1 < bufsize / sizeof(buf[0])) {
-            oldmsb = (buf[i+1] & 0x00FF0000) >> 16; 
-            buf[i+1] &= 0xFF00FFFF;
+    int count = 0;
+    uint8_t r = 0, g = 0, b = 0; 
+    printf("shorten: size = %ld\n", size);
+    for (size_t i = 0; i < size/4; ++i) {
+        if (count < size) {
+            b = (int8_t)(src[i] & 0x000000FF);
+            g = (int8_t)((src[i] & 0x0000FF00) >> 8);
+            r = (int8_t)((src[i] & 0x00FF0000) >> 16);
+
+            dest[count++] = (int8_t)b;
+            dest[count++] = (int8_t)g;
+            dest[count++] = (int8_t)r;
+            //  printf("0x%08X\n", buf[count - 1]);
         }
-        
-        buf[i] = (buf[i] & 0x00FFFFFF) | (oldmsb << 24);
+
+        printf("shorten: dest(r,g,b) = (0x%X, 0x%X, 0x%X)\n", dest[count-1], dest[count-2], dest[count-3]);
     }
-    return 1;
+
+    printf("shorten: buf_count = %d\n", count);
+
+    return count;
 }
+
