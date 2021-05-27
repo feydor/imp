@@ -41,12 +41,12 @@ int ordered_dithering(struct image32_t *image)
     for (size_t i = 0; i < image->h * (image->w / PXLSIZE); ++i) {
         factor = mat[i % (dim*dim)];
         color = *(image->buf + i);
-        printf("color = 0x%08X\n", color);
+        // printf("color = 0x%08X\n", color);
 
         r = R_FROM_PXL(color) + factor * thresholds[0];
         g = G_FROM_PXL(color) + factor * thresholds[1];
         b = B_FROM_PXL(color) + factor * thresholds[2];
-        printf("r,g,b = 0x%08X, 0x%08X, 0x%08X\n", R_FROM_PXL(color), G_FROM_PXL(color), B_FROM_PXL(color));
+        // printf("r,g,b = 0x%08X, 0x%08X, 0x%08X\n", R_FROM_PXL(color), G_FROM_PXL(color), B_FROM_PXL(color));
         /*
         
         color = INT32_MAX; // preserve the leftmost two bytes

@@ -19,7 +19,7 @@ static int read_bmpheaders(FILE *fp, struct bmp_fheader *bfhead,
 static int create_bmp_file(FILE *fp, struct bmp_fheader *bfhead, 
                                       struct bmp_iheader *bihead);
 static int swap_colorendian(int32_t *image, size_t size);
-static int write_bmp_buf(FILE *fp, const int32_t *image, size_t offset, size_t size);
+static int write_bmp_buf(FILE *fp, const int8_t *image, size_t offset, size_t size);
 static int widen(int32_t *dest, int8_t *src, size_t size);
 static int shorten(int8_t *dest, int32_t *src, size_t size);
 
@@ -130,6 +130,8 @@ write_image(int32_t *image, char *src, char *dest, size_t size)
     FILE *out = fopen(dest, "wb");
     if (!in || !out)
         return -1;
+    
+    int8_t *tempbuf = malloc(size);
 
     if (isbmp(in)) {
         /* reads and then writes bmp_headers to the file at dest */
@@ -141,9 +143,10 @@ write_image(int32_t *image, char *src, char *dest, size_t size)
         /* swaps image back to little-endian and writes it */
         // swap_colorendian(image, size);
         shorten(tempbuf, image, size);
-        write_bmp_buf(out, image, bfh.offset, size);
+        write_bmp_buf(out, tempbuf, bfh.offset, size);
     }
 
+    free(tempbuf);
     fclose(in);
     fclose(out);
     return 1;
@@ -241,7 +244,7 @@ swap_colorendian(int32_t *image, size_t size)
  * pointed to by image into the stream pointed to by fp
  */
 static int
-write_bmp_buf(FILE *fp, const int32_t *image, size_t offset, size_t size)
+write_bmp_buf(FILE *fp, const int8_t *image, size_t offset, size_t size)
 {
     assert(fp && "Is validated by the caller.");
     assert(image && "Is validated by the caller.");
@@ -258,7 +261,7 @@ write_bmp_buf(FILE *fp, const int32_t *image, size_t offset, size_t size)
 static int
 widen(int32_t *dest, int8_t *src, size_t size)
 {
-    int count = 0;
+    size_t count = 0;
     uint32_t r = 0, g = 0, b = 0; 
     printf("widen: size = %ld\n", size);
     for (size_t i = 0; i < size; i += 3) {
@@ -268,7 +271,6 @@ widen(int32_t *dest, int8_t *src, size_t size)
             r = (uint32_t)(src[i+2] & 0x000000FF);
 
             dest[count++] = (r << 16) | (g << 8) | b;
-            //  printf("0x%08X\n", buf[count - 1]);
         }
     }
 
@@ -277,11 +279,13 @@ widen(int32_t *dest, int8_t *src, size_t size)
     return count;
 }
 
+// TODO: dest is never filled to size`1
+// perhaps use a 2d array to shift bytes into place
 static int 
 shorten(int8_t *dest, int32_t *src, size_t size)
 {
-    int count = 0;
-    uint8_t r = 0, g = 0, b = 0; 
+    size_t count = 0;
+    uint8_t r = 0, g = 0, b = 0, junk = 0; 
     printf("shorten: size = %ld\n", size);
     for (size_t i = 0; i < size/4; ++i) {
         if (count < size) {
@@ -292,12 +296,9 @@ shorten(int8_t *dest, int32_t *src, size_t size)
             dest[count++] = (int8_t)b;
             dest[count++] = (int8_t)g;
             dest[count++] = (int8_t)r;
-            //  printf("0x%08X\n", buf[count - 1]);
         }
-
         printf("shorten: dest(r,g,b) = (0x%X, 0x%X, 0x%X)\n", dest[count-1], dest[count-2], dest[count-3]);
     }
-
     printf("shorten: buf_count = %d\n", count);
 
     return count;
