@@ -20,8 +20,6 @@ static int create_bmp_file(FILE *fp, struct bmp_fheader *bfhead,
                                       struct bmp_iheader *bihead);
 static int swap_colorendian(int32_t *image, size_t size);
 static int write_bmp_buf(FILE *fp, const int8_t *image, size_t offset, size_t size);
-static int widen(int32_t *dest, int8_t *src, size_t size);
-static int shorten(int8_t *dest, int32_t *src, size_t size);
 
 /** 
  * Updates the variables pointed to by width and height
@@ -103,7 +101,6 @@ read_image(const char *src, int32_t *dest, size_t size)
         fread(tempbuf, size, 1, fp);
 
         widen(dest, tempbuf, size);
-        // swap_colorendian(dest, size);
     }
     
     free(tempbuf);
@@ -140,9 +137,7 @@ write_image(int32_t *image, char *src, char *dest, size_t size)
         read_bmpheaders(in, &bfh, &bih);
         create_bmp_file(out, &bfh, &bih);
 
-        /* swaps image back to little-endian and writes it */
-        // swap_colorendian(image, size);
-        shorten(tempbuf, image, size);
+        narrow(tempbuf, image, size);
         write_bmp_buf(out, tempbuf, bfh.offset, size);
     }
 
@@ -258,7 +253,7 @@ write_bmp_buf(FILE *fp, const int8_t *image, size_t offset, size_t size)
 /**
  * shift bytes to account for 24bit RGB in a 32bit element
  */
-static int
+int
 widen(int32_t *dest, int8_t *src, size_t size)
 {
     size_t count = 0;
@@ -279,14 +274,14 @@ widen(int32_t *dest, int8_t *src, size_t size)
     return count;
 }
 
-// TODO: dest is never filled to size`1
+// TODO: dest is never filled to size
 // perhaps use a 2d array to shift bytes into place
-static int 
-shorten(int8_t *dest, int32_t *src, size_t size)
+int 
+narrow(int8_t *dest, int32_t *src, size_t size)
 {
     size_t count = 0;
     uint8_t r = 0, g = 0, b = 0, junk = 0; 
-    printf("shorten: size = %ld\n", size);
+    printf("narrow: size = %ld\n", size);
     for (size_t i = 0; i < size/4; ++i) {
         if (count < size) {
             b = (int8_t)(src[i] & 0x000000FF);
@@ -297,9 +292,9 @@ shorten(int8_t *dest, int32_t *src, size_t size)
             dest[count++] = (int8_t)g;
             dest[count++] = (int8_t)r;
         }
-        printf("shorten: dest(r,g,b) = (0x%X, 0x%X, 0x%X)\n", dest[count-1], dest[count-2], dest[count-3]);
+        printf("narrow: dest(r,g,b) = (0x%X, 0x%X, 0x%X)\n", dest[count-1], dest[count-2], dest[count-3]);
     }
-    printf("shorten: buf_count = %d\n", count);
+    printf("narrow: buf_count = %d\n", count);
 
     return count;
 }

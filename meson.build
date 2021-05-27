@@ -39,7 +39,7 @@ exe = executable('sadx64',
 
 # unit tests
 imageproc_test = executable('imageproc-test',
-    ['test/imageproc.c', 'src/imageproc.c'],
+    ['test/imageproc.c', 'src/imageproc.c', 'src/imageio.c', 'src/bmp.c'],
     include_directories: incl_dir,
     dependencies: [unity_dep, math_dep])
 test('unittests imageproc', imageproc_test)
