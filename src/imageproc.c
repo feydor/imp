@@ -33,34 +33,33 @@ int ordered_dithering(struct image32_t *image)
     };
 
     /* using an 8x8 Bayer matrix */
-    const size_t dim = 8*8;
-    int32_t mat[dim];
-    bayer_sqrmat(mat, 8);
+    const size_t dim = 8;
+    int32_t mat[dim * dim];
+    bayer_sqrmat(mat, dim);
 
     /* iterate over */
     unsigned factor = 0, r = 0, g = 0, b = 0;
     int32_t color = 0;
     int32_t closest = 0;
-    for (size_t y = 0; y < image->h; ++y)
-        for (size_t x = 0; x < image->w / PXLSIZE; ++x) {
-            factor = mat[(x & 7) + ((y & 7) << 3)];
-            color = image->buf[index_at(image, x, y)];
-            printf("color = 0x%08X\n", color);
+    for (size_t i = 0; i < image->h * image->w / PXLSIZE; ++i) {
+        factor = mat[i % 8];
+        color = *(image->buf + i);
+        printf("color = 0x%08X\n", color);
 
-            // TODO: Verify these calculations
-            r = R_FROM_PXL(color) + factor * thresholds[0];
-            g = G_FROM_PXL(color) + factor * thresholds[1];
-            b = B_FROM_PXL(color) + factor * thresholds[2];
-
-            color = INT32_MAX;
-            color = color ^ ((color ^ r) & 0xFF0000);
-            color = color ^ ((color ^ g) & 0x00FF00);
-            color = color ^ ((color ^ b) & 0x0000FF);
+        r = R_FROM_PXL(color) + factor * thresholds[0];
+        g = G_FROM_PXL(color) + factor * thresholds[1];
+        b = B_FROM_PXL(color) + factor * thresholds[2];
+        
+        /*
+        color = INT32_MAX; // set to all 1's
+        color = color ^ ((color ^ r) & 0xFF0000);
+        color = color ^ ((color ^ g) & 0x00FF00);
+        color = color ^ ((color ^ b) & 0x0000FF);
     
-            closest = closestfrompal(color, pal, sizeof(pal)/sizeof(pal[0]));
-            setpixel(image, closest, x, y);
-        }
-
+        closest = closestfrompal(color, pal, sizeof(pal)/sizeof(pal[0]));
+        */
+        *(image->buf + i) = color;
+    }
     return 1;
 }
 
@@ -99,7 +98,7 @@ bayer_sqrmat(int32_t *mat, size_t dim)
 int 
 setpixel(struct image32_t *image, int32_t pixel, size_t x, size_t y)
 {
-    image->buf[index_at(image, x, y)] = pixel;
+    image->buf[pixel_at(image, x, y)] = pixel;
     return 1;
 }
 
@@ -129,10 +128,22 @@ closestfrompal(int32_t color, int32_t *pal, size_t n)
     return res;
 }
 
-size_t
-index_at(const struct image32_t *image, size_t x, size_t y)
+/**
+ * returns the ith pixel at the given x and y byte coordinate
+ * on error, returns -1
+ *
+ * example (4x4 byte buffer/1x4 pixel buffer using 4 byte pixels):
+ * for (size_t y = 0; y < 4; ++y)
+ *    for (size_t x = 0; x < 4; ++x)
+ *        printf("i = %d\n", pixel_at(image, x, y));
+ * prints: 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4 
+ */
+int
+pixel_at(const struct image32_t *image, size_t x, size_t y)
 {
-    return x + y * image->w/PXLSIZE;
+    if (x < image->w && y < image->h)
+        return x / PXLSIZE + y * image->w / PXLSIZE; // int division drops decimals
+    return -1;
 }
 
 /*

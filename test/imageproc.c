@@ -1,15 +1,18 @@
 /* test/imageproc.c */
 #include <unity.h>
+#include <stdlib.h> /* for malloc */
 
 #include "../include/imageproc.h"
 
 /* test prototypes */
 void test_closestfrompal(void);
+void test_pixelat(void);
 
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_closestfrompal);
+    RUN_TEST(test_pixelat);
 }
 
 void setUp(void)
@@ -51,4 +54,55 @@ void test_closestfrompal(void)
     TEST_ASSERT_EQUAL(0x000000, closest); 
     closest = closestfrompal(0x004F00, pal, sizeof(pal)/sizeof(pal[0]));     
     TEST_ASSERT_EQUAL(0x008000, closest); 
+}
+
+void test_pixelat(void)
+{
+    /**
+     * generate a 4x4 byte image buffer (ie a 1x4 pixel buffer)
+     */
+    struct image32_t img = {0};
+    img.w = img.h = 4; // width is guaranteed to be a multiple of 4
+    img.buf = calloc(img.w * img.h, 1);
+    
+    /* normal iteration through every byte */
+    TEST_ASSERT_EQUAL(pixel_at(&img, 0, 0), 0);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 1, 0), 0);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 2, 0), 0);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 3, 0), 0);
+
+    TEST_ASSERT_EQUAL(pixel_at(&img, 0, 1), 1);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 1, 1), 1);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 2, 1), 1);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 3, 1), 1);
+    
+    TEST_ASSERT_EQUAL(pixel_at(&img, 0, 2), 2);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 1, 2), 2);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 2, 2), 2);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 3, 2), 2);
+    
+    TEST_ASSERT_EQUAL(pixel_at(&img, 0, 3), 3);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 1, 3), 3);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 2, 3), 3);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 3, 3), 3);
+
+    /* error on bound overflow */
+    TEST_ASSERT_EQUAL(pixel_at(&img, 4, 0), -1);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 0, 4), -1);
+    TEST_ASSERT_EQUAL(pixel_at(&img, 4, 4), -1);
+    
+    /* foreach-type iteration through each pixel */
+    int res[4] = {0};
+    int count = 0;
+    for (size_t y = 0; y < img.h; ++y)
+        for (size_t x = 0; x < img.w; x += 4) {
+            res[count++] = pixel_at(&img, x, y);
+        }
+
+    TEST_ASSERT_EQUAL(res[0], 0);
+    TEST_ASSERT_EQUAL(res[1], 1);
+    TEST_ASSERT_EQUAL(res[2], 2);
+    TEST_ASSERT_EQUAL(res[3], 3);
+
+    free(img.buf);
 }
