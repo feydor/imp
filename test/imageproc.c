@@ -10,8 +10,10 @@
 void test_closestfrompal(void);
 void test_pixelat(void);
 void test_bayer_sqrmat(void);
+/*
 void test_widen(void);
 void test_narrow(void);
+*/
 
 int main(void)
 {
@@ -19,8 +21,6 @@ int main(void)
     RUN_TEST(test_closestfrompal);
     RUN_TEST(test_pixelat);
     RUN_TEST(test_bayer_sqrmat);
-    RUN_TEST(test_widen);
-    RUN_TEST(test_narrow);
 }
 
 void setUp(void)
@@ -136,66 +136,3 @@ void test_bayer_sqrmat(void)
     TEST_ASSERT_EQUAL_INT32_ARRAY(ref, mat, sizeof(mat) / sizeof(mat[0]));
 }
 
-void test_widen(void)
-{
-    /* start with an 12 byte array filled with:
-     * [0xaa, 0xbb, 0xcc,
-     *  0xaa, 0xbb, 0xcc,
-     *  0xaa, 0xbb, 0xcc,
-     *  0xaa, 0xbb, 0xcc]*/
-    size_t size = 12;
-    uint8_t src[size];
-    
-    for (size_t i = 0; i < size; ++i) {
-        switch (i % 3) {
-            case 0:
-                src[i] = 0xaa;
-                break;
-            case 1:
-                src[i] = 0xbb;
-                break;
-            case 2:
-                src[i] = 0xcc;
-                break;
-        }
-    }   
-    TEST_ASSERT_EQUAL(0xaa, src[0]);
-    TEST_ASSERT_EQUAL(0xaa, src[3]);
-    TEST_ASSERT_EQUAL(0xaa, src[6]);
-    TEST_ASSERT_EQUAL(0xbb, src[1]);
-    TEST_ASSERT_EQUAL(0xbb, src[4]);
-    TEST_ASSERT_EQUAL(0xbb, src[7]);
-    TEST_ASSERT_EQUAL(0xcc, src[2]);
-    TEST_ASSERT_EQUAL(0xcc, src[5]);
-
-    /* fit into a 32bit array such that:
-     * [0x00aabbcc, 0x00aabbcc]*/
-
-    uint32_t dest[size];
-    int count = 0;
-    count = widen((int32_t *)&dest, (int8_t *)&src, size);
-    
-    TEST_ASSERT_EQUAL(3, count);
-    TEST_ASSERT_EQUAL(0x00ccbbaa, dest[0]);
-    TEST_ASSERT_EQUAL(0x00ccbbaa, dest[1]);
-    TEST_ASSERT_EQUAL(0x00ccbbaa, dest[2]);
-}
-
-void test_narrow(void)
-{
-    /* narrow a 3 pixel 32bit array into a 9byte array */
-    size_t size = 12;
-    int32_t src[] = { 0x00ccbbaa, 0x00ccbbaa, 0x00ccbbaa};
-
-    uint8_t dest[size]; 
-    int count = 0;
-    count = narrow((int8_t *)&dest, &src, size);
-
-    TEST_ASSERT_EQUAL(count, 9);
-    TEST_ASSERT_EQUAL(0xaa, dest[0]);
-    TEST_ASSERT_EQUAL(0xbb, dest[1]);
-    TEST_ASSERT_EQUAL(0xcc, dest[2]);
-    TEST_ASSERT_EQUAL(0xaa, dest[3]);
-    TEST_ASSERT_EQUAL(0xbb, dest[4]);
-    TEST_ASSERT_EQUAL(0xcc, dest[5]);
-}
