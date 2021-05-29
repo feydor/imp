@@ -2,7 +2,6 @@
 Graphics processing algorithms written in x86 assembly and C. Several versions are provided with an emphasis on optimizing for run-time speed. To that effect, SIMD and vectorization techniques will be heavily used and benchmarked.
 
 ## Screenshots
-
 ![Some results](/res/results.png)  
 *Pictured from left to right: ordered dithering (8x8 Bayer matrix), 16 color palette interpolation ([web-safe colors](https://www.w3.org/TR/REC-html40/types.html#h-6.5)), original*
 
