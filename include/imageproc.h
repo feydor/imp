@@ -29,6 +29,7 @@ int32_t closestfrompal(int32_t color, int32_t *pal, size_t size);
 int32_t swapbytes(uint32_t a, unsigned i, unsigned j);
 
 int unpackthree(int32_t *unpacked, const int32_t *packed);
+int packthree(const int32_t *unpacked, int32_t *packed);
 
 #define WPXLS_FROM_WBYTES(wbytes) ( wbytes / 4 )
 #define PXL_FROM_IDX(image, i) ( image->buf[i] )

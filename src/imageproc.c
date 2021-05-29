@@ -61,13 +61,13 @@ int ordered_dithering(struct image32_t *image)
     
         closest = closestfrompal(color, pal, sizeof(pal)/sizeof(pal[0]));
         printf("closest = 0x%08X\n", closest);
+        */
 
         packthree(unpacked, packed);
 
         image->buf[i] = packed[0];
         image->buf[i+1] = packed[1];
         image->buf[i+2] = packed[2];
-        */
     }
     return 1;
 }
@@ -215,3 +215,29 @@ unpackthree(int32_t *unpacked, const int32_t *packed)
     return 1;
 }
 
+int
+packthree(const int32_t *unpacked, int32_t *packed)
+{
+    assert(unpacked && "Is validated by the caller.");
+    assert(packed && "Is validated by the caller.");
+
+    uint8_t b0[3], b1[3], b2[3], b3[3];
+       
+    b0[0] = (uint8_t)((unpacked[0] & 0x00FF0000) >> 16); 
+    b0[1] = (uint8_t)((unpacked[0] & 0x0000FF00) >> 8); 
+    b0[2] = (uint8_t)(unpacked[0] & 0x000000FF); 
+    b1[0] = (uint8_t)((unpacked[1] & 0x00FF0000) >> 16); 
+    b1[1] = (uint8_t)((unpacked[1] & 0x0000FF00) >> 8); 
+    b1[2] = (uint8_t)(unpacked[1] & 0x000000FF); 
+    b2[0] = (uint8_t)((unpacked[2] & 0x00FF0000) >> 16); 
+    b2[1] = (uint8_t)((unpacked[2] & 0x0000FF00) >> 8); 
+    b2[2] = (uint8_t)(unpacked[2] & 0x000000FF); 
+    b3[0] = (uint8_t)((unpacked[3] & 0x00FF0000) >> 16); 
+    b3[1] = (uint8_t)((unpacked[3] & 0x0000FF00) >> 8); 
+    b3[2] = (uint8_t)(unpacked[3] & 0x000000FF); 
+
+    packed[0] = (b0[0] << 24) | (b0[1] << 16) | (b0[2] << 8) | b1[0];
+    packed[1] = (b1[1] << 24) | (b1[2] << 16) | (b2[0] << 8) | b2[1];
+    packed[2] = (b2[2] << 24) | (b3[0] << 16) | (b3[1] << 8) | b3[2];
+    return 1;
+}
