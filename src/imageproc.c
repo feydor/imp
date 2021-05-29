@@ -11,6 +11,9 @@
 
 extern int errno; /* these functions set errno on errors */
 
+static int apply_threshold(int32_t color, int32_t factor, 
+                           int32_t *thresholds);
+
 /**
  * ordered dithering with Bayer matrices
  */
@@ -19,7 +22,7 @@ int ordered_dithering(struct image32_t *image)
     if (!image || !image->buf)
         return -1;
 
-    int32_t thresholds[] = { 256/4, 256/4, 256/4 };
+    int32_t thresholds[] = { 256/2, 256/2, 256/2 };
     int32_t pal[] = {
         0x000000, 0x008000, 0x00FF00,
         0x0000FF, 0x0080FF, 0x00FFFF,
@@ -32,39 +35,45 @@ int ordered_dithering(struct image32_t *image)
 
     /* using an 8x8 Bayer matrix */
     const size_t dim = 8;
-    int32_t mat[dim * dim];
+    const size_t nmat = dim * dim;
+    int32_t mat[nmat];
     bayer_sqrmat(mat, dim);
 
     /* iterate over 3 packed pixels at a time, unpacking them into 4 */
-    unsigned factor = 0;//, r = 0, g = 0, b = 0;
     int32_t packed[3];
+    int32_t factors[4];
     int32_t unpacked[4];
+    int32_t processed[4];
     int32_t closest[4];
     for (size_t i = 0; i < image->h * image->w / PXLSIZE; i += 3) {
-        factor = mat[i % (dim*dim)];
+        factors[0] = mat[i % nmat];
+        factors[1] = mat[(i+1) % nmat];
+        factors[2] = mat[(i+2) % nmat];
+        // a hacky way of using the next pixel's factor rightnow
+        if (i+3 < image->h * image->w / PXLSIZE)
+            factors[3] = mat[(i+3) % nmat];
+        else
+            factors[3] = mat[(i+2) % nmat];
 
         packed[0] = image->buf[i];
         packed[1] = image->buf[i+1];
         packed[2] = image->buf[i+2];
         unpackthree(unpacked, packed);
 
-        /*
-        r = R_FROM_PXL(color) + factor * thresholds[0];
-        g = G_FROM_PXL(color) + factor * thresholds[1];
-        b = B_FROM_PXL(color) + factor * thresholds[2];
-        // printf("r,g,b = 0x%08X, 0x%08X, 0x%08X\n", R_FROM_PXL(color), G_FROM_PXL(color), B_FROM_PXL(color));
-       
-        color = INT32_MAX; // preserve the leftmost two bytes
-        color = color ^ ((color ^ r) & 0xFF0000);
-        color = color ^ ((color ^ g) & 0x00FF00);
-        color = color ^ ((color ^ b) & 0x0000FF);
-        printf("new color = 0x%08X\n", color);
-        */
-    
-        closest[0] = closestfrompal(unpacked[0], pal, npal);
-        closest[1] = closestfrompal(unpacked[1], pal, npal);
-        closest[2] = closestfrompal(unpacked[2], pal, npal);
-        closest[3] = closestfrompal(unpacked[3], pal, npal);
+        printf("dithering: unpacked[0] = 0x%08X\n", unpacked[0]);
+        printf("dithering: unpacked[1] = 0x%08X\n", unpacked[1]);
+        printf("dithering: unpacked[2] = 0x%08X\n", unpacked[2]);
+        printf("dithering: unpacked[3] = 0x%08X\n", unpacked[3]);
+
+        processed[0] = apply_threshold(unpacked[0], factors[0], thresholds);
+        processed[1] = apply_threshold(unpacked[1], factors[1], thresholds);
+        processed[2] = apply_threshold(unpacked[2], factors[2], thresholds);
+        processed[3] = apply_threshold(unpacked[3], factors[3], thresholds);
+
+        closest[0] = closestfrompal(processed[0], pal, npal);
+        closest[1] = closestfrompal(processed[1], pal, npal);
+        closest[2] = closestfrompal(processed[2], pal, npal);
+        closest[3] = closestfrompal(processed[3], pal, npal);
 
         packthree(closest, packed);
 
@@ -82,8 +91,8 @@ int ordered_dithering(struct image32_t *image)
  * 2. Interleave their bits in reverse order,
  * 3. Floating point divide the result by N (x * y)
  */
-void
-bayer_sqrmat(int32_t *mat, size_t dim)
+    void
+    bayer_sqrmat(int32_t *mat, size_t dim)
 {
     printf(" X=%lu, Y=%lu:\n", dim, dim);
     for (size_t y = 0; y < dim; ++y) {
@@ -96,7 +105,6 @@ bayer_sqrmat(int32_t *mat, size_t dim)
                 res |= ((yc >> mask) & 1) << bit++;
                 res |= ((xc >> mask) & 1) << bit++;
             }
-            // res = reverse(interleave(xc, yc));
             mat[x + y * dim] = res;
             printf("%4d", res);
         }
@@ -138,6 +146,19 @@ closestfrompal(int32_t color, int32_t *pal, size_t n)
         }
     }
     return res;
+}
+
+/**
+ * applies the following equation on the passed in color:
+ * color = color + factor * threshold, on each BGR component
+ * NOTE: threshold size must be 3
+ */
+static int32_t
+apply_threshold(int32_t color, int32_t factor, int32_t *thresholds) 
+{
+    assert(thresholds && "Is validated by the caller.");
+
+    return color + factor * thresholds[0];
 }
 
 /**
