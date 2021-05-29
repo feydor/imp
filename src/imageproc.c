@@ -28,6 +28,7 @@ int ordered_dithering(struct image32_t *image)
         0xFF0000, 0xFF8000, 0xFFFF00,
         0xFF00FF, 0xFF80FF, 0xFFFFFF
     };
+    size_t npal = sizeof(pal) / sizeof(pal[0]);
 
     /* using an 8x8 Bayer matrix */
     const size_t dim = 8;
@@ -36,8 +37,8 @@ int ordered_dithering(struct image32_t *image)
 
     /* iterate over 3 packed pixels at a time, unpacking them into 4 */
     unsigned factor = 0;//, r = 0, g = 0, b = 0;
-    int32_t unpacked[4];
     int32_t packed[3];
+    int32_t unpacked[4];
     int32_t closest[4];
     for (size_t i = 0; i < image->h * image->w / PXLSIZE; i += 3) {
         factor = mat[i % (dim*dim)];
@@ -52,18 +53,20 @@ int ordered_dithering(struct image32_t *image)
         g = G_FROM_PXL(color) + factor * thresholds[1];
         b = B_FROM_PXL(color) + factor * thresholds[2];
         // printf("r,g,b = 0x%08X, 0x%08X, 0x%08X\n", R_FROM_PXL(color), G_FROM_PXL(color), B_FROM_PXL(color));
-        
+       
         color = INT32_MAX; // preserve the leftmost two bytes
         color = color ^ ((color ^ r) & 0xFF0000);
         color = color ^ ((color ^ g) & 0x00FF00);
         color = color ^ ((color ^ b) & 0x0000FF);
         printf("new color = 0x%08X\n", color);
-    
-        closest = closestfrompal(color, pal, sizeof(pal)/sizeof(pal[0]));
-        printf("closest = 0x%08X\n", closest);
         */
+    
+        closest[0] = closestfrompal(unpacked[0], pal, npal);
+        closest[1] = closestfrompal(unpacked[1], pal, npal);
+        closest[2] = closestfrompal(unpacked[2], pal, npal);
+        closest[3] = closestfrompal(unpacked[3], pal, npal);
 
-        packthree(unpacked, packed);
+        packthree(closest, packed);
 
         image->buf[i] = packed[0];
         image->buf[i+1] = packed[1];
@@ -117,24 +120,21 @@ setpixel(struct image32_t *image, int32_t pixel, size_t x, size_t y)
 int32_t
 closestfrompal(int32_t color, int32_t *pal, size_t n)
 {
-    // Use euclidean RGB distance 
+    // use euclidean RGB distances to determine closeness
     int32_t d = INT32_MAX - 1, min = INT32_MAX, res = INT32_MAX;
     int32_t r = 0, g = 0, b = 0;
     for (size_t i = 0; i < n; ++i) {
-        r = (pal[i] & 0xFF0000) >> 16;
+        b = (pal[i] & 0xFF0000) >> 16;
         g = (pal[i] & 0x00FF00) >> 8;
-        b = pal[i] & 0x0000FF;
-        d = sqrt( pow(abs(r - ((color & 0xFF0000) >> 16)), 2) +
+        r = pal[i] & 0x0000FF;
+        d = sqrt( pow(abs(b - ((color & 0xFF0000) >> 16)), 2) +
                   pow(abs(g - ((color & 0x00FF00) >> 8)), 2) +
-                  pow(abs(b - (color & 0x0000FF)), 2)
+                  pow(abs(r - (color & 0x0000FF)), 2)
             );
-
-        if (d == 0)
-            return (r << 16) | (g << 8) | b;
 
         if (d < min) {
            min = d;
-           res = (r << 16 ) | (g << 8) | b;
+           res = pal[i];
         }
     }
     return res;
