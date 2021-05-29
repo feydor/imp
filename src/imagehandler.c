@@ -36,8 +36,6 @@ handle_image(options_t *options)
     if (!read_image(options->src, image.buf, image.w * image.h))
         perror("read_image");
 
-    // TODO: call image processing routine here
-    // invert_bmp(image.buf, height * width);
     ordered_dithering(&image);
     
     if (!write_image(image.buf, options->src, options->dest, 

@@ -1,4 +1,4 @@
-/* imageproc.c - functions for image processing */
+    /* imageproc.c - functions for image processing */
 #include <assert.h> /* for assert */
 #include <errno.h> /* for errno */
 #include <limits.h> /* for UINT_MAX */ 
@@ -34,20 +34,24 @@ int ordered_dithering(struct image32_t *image)
     int32_t mat[dim * dim];
     bayer_sqrmat(mat, dim);
 
-    /* iterate over */
-    unsigned factor = 0, r = 0, g = 0, b = 0;
-    int32_t color = 0;
-    int32_t closest = 0;
-    for (size_t i = 0; i < image->h * (image->w / PXLSIZE); ++i) {
+    /* iterate over 3 packed pixels at a time, unpacking them into 4 */
+    unsigned factor = 0;//, r = 0, g = 0, b = 0;
+    int32_t unpacked[4];
+    int32_t packed[3];
+    int32_t closest[4];
+    for (size_t i = 0; i < image->h * image->w / PXLSIZE; i += 3) {
         factor = mat[i % (dim*dim)];
-        color = *(image->buf + i);
-        // printf("color = 0x%08X\n", color);
 
+        packed[0] = image->buf[i];
+        packed[1] = image->buf[i+1];
+        packed[2] = image->buf[i+2];
+        unpackthree(unpacked, packed);
+
+        /*
         r = R_FROM_PXL(color) + factor * thresholds[0];
         g = G_FROM_PXL(color) + factor * thresholds[1];
         b = B_FROM_PXL(color) + factor * thresholds[2];
         // printf("r,g,b = 0x%08X, 0x%08X, 0x%08X\n", R_FROM_PXL(color), G_FROM_PXL(color), B_FROM_PXL(color));
-        /*
         
         color = INT32_MAX; // preserve the leftmost two bytes
         color = color ^ ((color ^ r) & 0xFF0000);
@@ -57,8 +61,13 @@ int ordered_dithering(struct image32_t *image)
     
         closest = closestfrompal(color, pal, sizeof(pal)/sizeof(pal[0]));
         printf("closest = 0x%08X\n", closest);
+
+        packthree(unpacked, packed);
+
+        image->buf[i] = packed[0];
+        image->buf[i+1] = packed[1];
+        image->buf[i+2] = packed[2];
         */
-        *(image->buf + i) = color;
     }
     return 1;
 }
@@ -169,5 +178,40 @@ swapbytes(uint32_t a, unsigned i, unsigned j)
     unsigned temp = ((a >> CHAR_BIT*i) ^ (a >> CHAR_BIT*j)) & 
         ((1U << CHAR_BIT) - 1);
     return a ^ ((temp << CHAR_BIT*i) | (temp << CHAR_BIT*j));
+}
+
+/**
+ * takes 3 packed pixels, and returns 4 unpacked pixels
+ * i0: 0x(bbggrr)(bb,
+ * i1: 0xggrr)(bbgg,
+ * i2: 0xrr)(bbggrr)
+ * the output is the grouped bytes with the leftmost two bytes set to 00
+ */
+int
+unpackthree(int32_t *unpacked, const int32_t *packed)
+{
+    assert(unpacked && "Is validated by the caller.");
+    assert(packed && "Is validated by the caller.");
+
+    uint8_t b1 = 0, b2 = 0, b3 = 0, b4 = 0;
+    for (size_t i = 0; i < 3; ++i)
+    {
+        b1 = (uint8_t)((packed[i] & 0xFF000000) >> 24);
+        b2 = (uint8_t)((packed[i] & 0x00FF0000) >> 16);
+        b3 = (uint8_t)((packed[i] & 0x0000FF00) >> 8);
+        b4 = (uint8_t)(packed[i] & 0x000000FF);
+
+        if (i == 0) {
+            unpacked[0] = 0 | (b1 << 16) | (b2 << 8) | b3;
+            unpacked[1] = b4 << 16;
+        } else if (i == 1) {
+            unpacked[1] |= (b1 << 8) | b2;
+            unpacked[2] = 0 | (b3 << 16) | (b4 << 8);
+        } else if (i == 2) {
+            unpacked[2] |= b1;
+            unpacked[3] = 0 | (b2 << 16) | (b3 << 8) | b4;
+        }
+    }
+    return 1;
 }
 

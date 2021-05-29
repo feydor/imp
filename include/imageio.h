@@ -13,6 +13,5 @@ void free_image_buf(int32_t *image);
 
 int pack(int32_t *dest, int8_t *src, size_t size);
 int unpack(int8_t *dest, int32_t *src, size_t size);
-int unpackthree(int32_t *unpacked, int32_t *packed);
 
 #endif

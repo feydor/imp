@@ -104,6 +104,7 @@ read_image(const char *src, int32_t *dest, size_t size)
     }
     
     free(tempbuf);
+    tempbuf = NULL;
     
     fclose(fp);
     return 1;
@@ -263,14 +264,14 @@ int
 pack(int32_t *dest, int8_t *src, size_t size) {
     size_t count = 0;
     const size_t PACKSIZE = 4;
-    uint32_t b1 = 0, b2 = 0, b3 = 0, b4 = 0;
+    uint8_t b1 = 0, b2 = 0, b3 = 0, b4 = 0;
     printf("pack: size = %ld\n", size);
     
     for (size_t i = 0; i < size; i += PACKSIZE) {
-        b1 = (uint32_t)(src[i] & 0x000000FF);
-        b2 = (uint32_t)(src[i+1] & 0x000000FF);
-        b3 = (uint32_t)(src[i+2] & 0x000000FF);
-        b4 = (uint32_t)(src[i+3] & 0x000000FF);
+        b1 = (uint8_t)(src[i] & 0xFF);
+        b2 = (uint8_t)(src[i+1] & 0xFF);
+        b3 = (uint8_t)(src[i+2] & 0xFF);
+        b4 = (uint8_t)(src[i+3] & 0xFF);
         
         dest[count++] = (b1 << 24) | (b2 << 16) | (b3 << 8) | b4;
     }
@@ -298,41 +299,5 @@ unpack(int8_t *dest, int32_t *src, size_t size)
     }
     printf("unpack: dest_count = %d\n", count);
     return count;
-    
-}
-
-/**
- * takes 3 packed pixels, and returns 4 unpacked pixels
- * i0: 0x(bbggrr)(bb,
- * i1: 0xggrr)(bbgg,
- * i2: 0xrr)(bbggrr)
- * the output is the grouped bytes with the leftmost two bytes set to 00
- */
-int
-unpackthree(int32_t *unpacked, int32_t *packed)
-{
-    assert(unpacked && "Is validated by the caller.");
-    assert(packed && "Is validated by the caller.");
-
-    int8_t b1 = 0, b2 = 0, b3 = 0, b4 = 0;
-    for (size_t i = 0; i < 3; ++i)
-    {
-        b1 = (packed[i] & 0xFF000000) >> 24;
-        b2 = (packed[i] & 0x00FF0000) >> 16;
-        b3 = (packed[i] & 0x0000FF00) >> 8;
-        b4 = packed[i] & 0x000000FF;
-
-        if (i == 0) {
-            unpacked[0] = 0 | (b1 << 16) | (b2 << 8) | b3;
-            unpacked[1] = b4 << 16;
-        } else if (i == 1) {
-            unpacked[1] |= (b1 << 8) | b2;
-            unpacked[2] = 0 | (b3 << 16) | (b4 << 8);
-        } else if (i == 2) {
-            unpacked[2] |= b1;
-            unpacked[3] = 0 | (b2 << 16) | (b3 << 8) | b4;
-        }
-    }
-    return 1;
 }
 
