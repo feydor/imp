@@ -10,10 +10,6 @@
 void test_closestfrompal(void);
 void test_pixelat(void);
 void test_bayer_sqrmat(void);
-/*
-void test_widen(void);
-void test_narrow(void);
-*/
 
 int main(void)
 {

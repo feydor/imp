@@ -3,7 +3,7 @@ Graphics processing algorithms written in x86 assembly and C. Several versions a
 
 ## Screenshots
 ![Some results](/res/results.png)  
-*Pictured from left to right: ordered dithering (8x8 Bayer matrix), 16 color palette interpolation ([web-safe colors](https://www.w3.org/TR/REC-html40/types.html#h-6.5)), original*
+*Pictured from left to right: ordered dithering (8x8 Bayer matrix), 16 color palette quantization ([web-safe colors](https://www.w3.org/TR/REC-html40/types.html#h-6.5)), original*
 
 ## Algorithms Implemented
 - Ordered dithering in C.

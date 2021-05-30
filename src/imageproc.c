@@ -11,18 +11,19 @@
 
 extern int errno; /* these functions set errno on errors */
 
-static int apply_threshold(int32_t color, int32_t factor, 
-                           int32_t *thresholds);
+static int apply_threshold(int32_t color, int32_t matval, int32_t offset,
+                int32_t *thresholds); 
 
 /**
  * ordered dithering with Bayer matrices
+ * eq: c' = closestfrompal(c + r * (M(x%n, y%n) - 0.5))
+ * r = 256 / N - 1 (N^3 evenly choosen colors in palette)
  */
 int ordered_dithering(struct image32_t *image)
 {
     if (!image || !image->buf)
         return -1;
 
-    int32_t thresholds[] = { 256/2, 256/2, 256/2 };
     int32_t pal[] = {
         0x000000, 0x008000, 0x00FF00,
         0x0000FF, 0x0080FF, 0x00FFFF,
@@ -34,10 +35,18 @@ int ordered_dithering(struct image32_t *image)
     size_t npal = sizeof(pal) / sizeof(pal[0]);
 
     /* using an 8x8 Bayer matrix */
-    const size_t dim = 8;
-    const size_t nmat = dim * dim;
-    int32_t mat[nmat];
-    bayer_sqrmat(mat, dim);
+    const size_t dim = 4;
+    int32_t mat[] = {
+        0, 8, 2, 10,
+        12, 4, 14, 6,
+        3, 11, 1, 9,
+        15, 7, 13, 5
+    };
+    const size_t nmat = sizeof(mat) / sizeof(mat[0]);
+    int32_t thresholds[] = { 256/4, 256/4, 256/4 };
+
+    int32_t offset = (dim * (dim / 2)) - 0.5;
+    // bayer_sqrmat(mat, dim);
 
     /* iterate over 3 packed pixels at a time, unpacking them into 4 */
     int32_t packed[3];
@@ -45,6 +54,7 @@ int ordered_dithering(struct image32_t *image)
     int32_t unpacked[4];
     int32_t processed[4];
     int32_t closest[4];
+    int32_t nextclosest[4];
     for (size_t i = 0; i < image->h * image->w / PXLSIZE; i += 3) {
         factors[0] = mat[i % nmat];
         factors[1] = mat[(i+1) % nmat];
@@ -60,22 +70,17 @@ int ordered_dithering(struct image32_t *image)
         packed[2] = image->buf[i+2];
         unpackthree(unpacked, packed);
 
-        printf("dithering: unpacked[0] = 0x%08X\n", unpacked[0]);
-        printf("dithering: unpacked[1] = 0x%08X\n", unpacked[1]);
-        printf("dithering: unpacked[2] = 0x%08X\n", unpacked[2]);
-        printf("dithering: unpacked[3] = 0x%08X\n", unpacked[3]);
-
-        processed[0] = apply_threshold(unpacked[0], factors[0], thresholds);
-        processed[1] = apply_threshold(unpacked[1], factors[1], thresholds);
-        processed[2] = apply_threshold(unpacked[2], factors[2], thresholds);
-        processed[3] = apply_threshold(unpacked[3], factors[3], thresholds);
+        processed[0] = apply_threshold(unpacked[0], factors[0], offset, thresholds);
+        processed[1] = apply_threshold(unpacked[1], factors[1], offset, thresholds);
+        processed[2] = apply_threshold(unpacked[2], factors[2], offset, thresholds);
+        processed[3] = apply_threshold(unpacked[3], factors[3], offset, thresholds);
 
         closest[0] = closestfrompal(processed[0], pal, npal);
         closest[1] = closestfrompal(processed[1], pal, npal);
         closest[2] = closestfrompal(processed[2], pal, npal);
         closest[3] = closestfrompal(processed[3], pal, npal);
 
-        packthree(closest, packed);
+        packthree(processed, packed);
 
         image->buf[i] = packed[0];
         image->buf[i+1] = packed[1];
@@ -91,8 +96,8 @@ int ordered_dithering(struct image32_t *image)
  * 2. Interleave their bits in reverse order,
  * 3. Floating point divide the result by N (x * y)
  */
-    void
-    bayer_sqrmat(int32_t *mat, size_t dim)
+void
+bayer_sqrmat(int32_t *mat, size_t dim)
 {
     printf(" X=%lu, Y=%lu:\n", dim, dim);
     for (size_t y = 0; y < dim; ++y) {
@@ -154,11 +159,22 @@ closestfrompal(int32_t color, int32_t *pal, size_t n)
  * NOTE: threshold size must be 3
  */
 static int32_t
-apply_threshold(int32_t color, int32_t factor, int32_t *thresholds) 
+apply_threshold(int32_t color, int32_t matval, int32_t offset,
+                int32_t *thresholds) 
 {
     assert(thresholds && "Is validated by the caller.");
 
-    return color + factor * thresholds[0];
+    float r, g, b;
+    b = (((color & 0x00FF0000) >> 16) + thresholds[0] * (matval - offset));
+    g = (((color & 0x0000FF00) >> 8) + thresholds[1] * (matval - offset));
+    r = ((color & 0x000000FF) + thresholds[2] * (matval - offset));
+
+    r = round(r / 255) * 255;
+    g = round(g / 255) * 255;
+    b = round(b / 255) * 255;
+    
+
+    return 0 | ((uint8_t)(b) << 16) | ((uint8_t)g << 8) | (uint8_t)r;
 }
 
 /**
