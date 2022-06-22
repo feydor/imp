@@ -1,5 +1,0 @@
-SET CL=/EHsc /GR /FI"iso646.h" /Zc:strictStrings /we4627 /we4927 /wd4351 /W4 /D"_CRT_SECURE_NO_WARNINGS" /nologo
-SET LINK=/entry:mainCRTStartup /nologo
-
-rc res1.rc
-cl hello.c /Fe"hello" /link /subsystem:windows user32.lib comdlg32.lib gdi32.lib comctl32.lib res1.RES
