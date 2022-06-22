@@ -36,7 +36,7 @@ struct bmp_iheader {
     uint32_t  compressionType; /* specifies the type of compression */
     uint32_t  imageSize;   /* specifies the image size in bytes */
     uint32_t  XpxlsPerMeter; /* specifies the number of pixels per meter, x axis */
-    uint32_t  YPxlsPerMeter; /* specifies the number of pixels per meter, y axis */
+    uint32_t  YpxlsPerMeter; /* specifies the number of pixels per meter, y axis */
     uint32_t  colorsUsed;      /* number of colors used */
     uint32_t  colorsImportant; /* number of colors that are important */
 };
