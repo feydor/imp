@@ -1,5 +1,5 @@
 /* bmp.c */
-#include "../include/bmp.h"
+#include "bmp.h"
 #include <stdio.h> /* for printf */
 #include <stdlib.h> /* for abs */
 
