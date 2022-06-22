@@ -1,7 +1,0 @@
-[wrap-file]
-directory = saru-buf-0.3.0
-
-source_url = https://github.com/feydor/saru-buf/archive/refs/tags/v0.3.0.tar.gz
-source_filename = saru-buf-0.3.0.tar.gz
-source_hash = 5026b3cc7a315e3a674c14b24cb95668e17d61f0dc8c31e3f2f7df35ca5d1899
-

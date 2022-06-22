@@ -77,7 +77,7 @@ int handle_image(char *src, char *dest) {
 
    unsigned char image_buffer[biheader.imageSize];
    size_t read = fread(image_buffer, 1, biheader.imageSize, fp);
-   printf("amount read: %ld bytes\n", read); 
+   printf("amount read: %ld bytes\n", read);
 
    int x_total_bytes = biheader.imageWidth * biheader.bitsPerPxl / 8;
    int x_image_bytes = x_total_bytes - (x_total_bytes % 4); // padding
