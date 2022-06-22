@@ -15,12 +15,19 @@ extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
 
-static char *DEFAULT_SRC = "../colors.bmp";
+static char *DEFAULT_SRC = "../lol.bmp";
 static char *DEFAULT_DEST = "../RESULT.bmp";
 static int BMP_MAGIC = 0x4D42;
 
 void usage(char *progname) {
    fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
+}
+
+void print_buffer(char *buf, size_t size) {
+   printf("--------------------------\n");
+   for (size_t i = 0; i < size; ++i)
+      printf("%#01X ", buf[i]);
+   printf("\n--------------------------\n");
 }
 
 // Assumes Little-endian, 24bit bmp
@@ -70,35 +77,24 @@ int handle_image(char *src, char *dest) {
 
    char image_buffer[biheader.imageSize];
    size_t read = fread(image_buffer, 1, biheader.imageSize, fp);
-   if (feof(fp))
-      printf("Hit EOF\n");
    printf("amount read: %ld bytes\n", read); 
 
-   printf("--------------------------\n");
-   printf("printing raw image BUFFER:\n");
-   for (size_t i = 0; i < sizeof(image_buffer); ++i) {
-      // printf("%#01X ", image_buffer[i]);
-   }
-   printf("\n--------------------------\n");
-
-   printf("bytes in x: %d\n", biheader.imageWidth * biheader.bitsPerPxl / 8);
-   printf("padding in x: %d\n", 8 % (biheader.imageWidth * (biheader.bitsPerPxl / 8)));
+   int x_total_bytes = biheader.imageWidth * biheader.bitsPerPxl / 8;
+   int x_image_bytes = x_total_bytes - (x_total_bytes % 4); // padding
+   printf("bytes in x: %d\n", x_total_bytes);
+   printf("padding in x: %d\n", x_total_bytes % 4);
+   printf("bytes in x WITHOUT padding: %d\n", x_image_bytes);
    printf("pixels in y: %d\n", biheader.imageHeight);
 
    printf("--------------------------\n");
    printf("printing image BUFFER, ignoring padding\n");
-   int x_image_bytes = biheader.imageWidth * biheader.bitsPerPxl / 8;
-   int x_total_bytes = x_image_bytes - (x_image_bytes % 4); // padding
    for (int y = 0; y < (int)biheader.imageHeight; ++y) {
       for (int x = 0; x < x_image_bytes; ++x) {
-         int i = x + (y * x_total_bytes);
-         // printf("%08X ", image_buffer[i]);
+         int i = x + (y * x_image_bytes);
 
          // invert pixels
-         // image_buffer[i] = 255 - image_buffer[i];
-         // if (x == 2) printf("|| ");
+         image_buffer[i] = 255 - image_buffer[i];
       }
-      // printf("\n");
    }
    printf("--------------------------\n");
 
