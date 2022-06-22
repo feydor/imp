@@ -15,8 +15,8 @@ extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
 
-static char *DEFAULT_SRC = "../res/simple.bmp";
-static char *DEFAULT_DEST = "../result.bmp";
+static char *DEFAULT_SRC = "../colors.bmp";
+static char *DEFAULT_DEST = "../RESULT.bmp";
 static int BMP_MAGIC = 0x4D42;
 
 void usage(char *progname) {
@@ -64,18 +64,20 @@ int handle_image(char *src, char *dest) {
    printf("image dimensions: %d x %d (w x h px)\n", biheader.imageWidth, biheader.imageHeight);
    printf("image size: %d bytes\n", biheader.imageSize);
    printf("offset to data: %#01X\n", bfheader.offset);
-
    fseek(fp, bfheader.offset, SEEK_SET);
 
+   printf("location of fp, AFTER SEEK: %#01lX\n", ftell(fp));
+
    char image_buffer[biheader.imageSize];
-   fscanf(fp, "%s", image_buffer);
+   size_t read = fread(image_buffer, 1, biheader.imageSize, fp);
    if (feof(fp))
       printf("Hit EOF\n");
+   printf("amount read: %ld bytes\n", read); 
 
    printf("--------------------------\n");
    printf("printing raw image BUFFER:\n");
    for (size_t i = 0; i < sizeof(image_buffer); ++i) {
-      printf("%#01X ", image_buffer[i]);
+      // printf("%#01X ", image_buffer[i]);
    }
    printf("\n--------------------------\n");
 
@@ -84,19 +86,44 @@ int handle_image(char *src, char *dest) {
    printf("pixels in y: %d\n", biheader.imageHeight);
 
    printf("--------------------------\n");
-   printf("printing image BUFFER without padding\n");
+   printf("printing image BUFFER, ignoring padding\n");
    int x_image_bytes = biheader.imageWidth * biheader.bitsPerPxl / 8;
    int x_total_bytes = x_image_bytes - (x_image_bytes % 4); // padding
    for (int y = 0; y < (int)biheader.imageHeight; ++y) {
       for (int x = 0; x < x_image_bytes; ++x) {
          int i = x + (y * x_total_bytes);
-         printf("%08X ", image_buffer[i]);
-         if (x == 2) printf("|| ");
+         // printf("%08X ", image_buffer[i]);
+
+         // invert pixels
+         // image_buffer[i] = 255 - image_buffer[i];
+         // if (x == 2) printf("|| ");
       }
-      printf("\n");
+      // printf("\n");
    }
    printf("--------------------------\n");
 
+   // write image_buffer to dest file
+   printf("writing to dest file: '%s'\n", dest);
+   FILE *dest_fp = fopen(dest, "wb");
+   if (!dest_fp) return -1;
+
+   // write bfheader and biheader
+   fwrite(&bfheader.ftype, sizeof(bfheader.ftype), 1, dest_fp);   
+   fwrite(&bfheader.fsize, sizeof(bfheader.fsize), 1, dest_fp);
+   fwrite(&bfheader.reserved1, sizeof(bfheader.reserved1), 1, dest_fp);
+   fwrite(&bfheader.reserved2, sizeof(bfheader.reserved2), 1, dest_fp);
+   fwrite(&bfheader.offset, sizeof(bfheader.offset), 1, dest_fp);
+
+   // NOTE: biheader is properly aligned, so no padding, so just write the whole struct
+   fwrite(&biheader, sizeof(biheader), 1, dest_fp);
+
+   // actually write the buffer now
+   fseek(dest_fp, bfheader.offset, SEEK_SET);
+   size_t bytes_written = fwrite(&image_buffer, 1, biheader.imageSize, dest_fp);
+   assert(bytes_written == biheader.imageSize && "fwrite failed somehow");
+
+   fclose(fp);
+   fclose(dest_fp);
    return -1;
 }
 
