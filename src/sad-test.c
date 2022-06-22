@@ -20,46 +20,6 @@ extern int sad(uint64_t* template, uint64_t starting_row,
 
 static void run_benchmarks();
 
-/*
-int handle_bmp(options_t *options) {
-    struct bmp_iheader biHeader;
-    unsigned char *bmpData; // must be free'd
-    if( !(bmpData = parse_24bit_bmp(options->input, &biHeader)) ) {
-        errno = ENOENT;
-        return 0;
-    }
-    
-    printf("Filename: %s\n", basename(options->fname));
-    print_biHeader(&biHeader);
-    
-    // calculate frame height and width
-    // TODO: is frame_height in pixels or bytes? check biHeader.bitsPerPixel
-    unsigned int frame_width = image_width_bytes(&biHeader) + bmp_row_padding(image_width_bytes(&biHeader));
-    unsigned int frame_height = biHeader.imageHeight;
-    printf("frame_width: %d\nframe_height: %d\n", frame_width, frame_height);
-    
-    // find a square template that fits the frame 
-    // TODO: Let the user choose the template
-    unsigned int template_width, template_height;
-    template_dim_from_frame_dim(frame_width, frame_height, &template_width, &template_height);
-    printf("template_width: %d\ntemplate_height: %d\n", template_width, template_height);
-    
-    // create and assign saru_bytemat structs for template and frame
-    SBM_CREATE(template, template_width, template_height);
-    SBM_WRAP(frame, bmpData, frame_width, frame_height);
-    
-    // start algorithms
-    struct sad_result res = c_sad( template, frame );
-    printf("Result of C_SAD (sad): %d\n", res.sad);
-    printf("Result of C_SAD (frow): %ld\n", res.frow);
-    printf("Result of C_SAD (fcol): %ld\n", res.fcol);
-    
-    sbm_destroy(template);
-    sbm_destroy(frame);
-    return 1;
-}
-*/
-
 static void
 run_benchmarks() 
 {

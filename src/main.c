@@ -75,7 +75,7 @@ int handle_image(char *src, char *dest) {
 
    printf("location of fp, AFTER SEEK: %#01lX\n", ftell(fp));
 
-   char image_buffer[biheader.imageSize];
+   unsigned char image_buffer[biheader.imageSize];
    size_t read = fread(image_buffer, 1, biheader.imageSize, fp);
    printf("amount read: %ld bytes\n", read); 
 
@@ -88,13 +88,10 @@ int handle_image(char *src, char *dest) {
 
    printf("--------------------------\n");
    printf("printing image BUFFER, ignoring padding\n");
-   for (int y = 0; y < (int)biheader.imageHeight; ++y) {
-      for (int x = 0; x < x_image_bytes; ++x) {
-         int i = x + (y * x_image_bytes);
-
-         // invert pixels
-         image_buffer[i] = 255 - image_buffer[i];
-      }
+   for (int i = 0; i < (int)biheader.imageSize; ++i) {
+      // TODO: find out where padding is located
+      image_buffer[i] = 255 - image_buffer[i];
+      image_buffer[i] = 255 - image_buffer[i];
    }
    printf("--------------------------\n");
 
