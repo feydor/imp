@@ -16,8 +16,7 @@ aspiring cli bmp editing program
 git clone https://github.com/feydor/imp
 cd imp
 mkdir build && cd build
-meson ..
-ninja
+./../build.sh
 ./imp
 ```
 

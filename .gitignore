@@ -2,6 +2,7 @@ bin/
 build/
 subprojects/*/
 .idea/
+.vscode/
 
 # build artifacts
 *.rct 
