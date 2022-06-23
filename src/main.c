@@ -66,19 +66,19 @@ int handle_image(char *src, char *dest) {
    struct bmp_iheader biheader;
    assert(40 == sizeof(biheader));
    fread(&biheader, sizeof(biheader), 1, fp);
-   printf("image dimensions: %d x %d (w x h px)\n", biheader.imageWidth, biheader.imageHeight);
-   printf("image size: %d bytes\n", biheader.imageSize);
+   printf("image dimensions: %d x %d (w x h px)\n", biheader.width_px, biheader.height_px);
+   printf("image size: %d bytes\n", biheader.image_size_bytes);
    printf("offset to data: %#01X\n", bfheader.offset);
 
    fseek(fp, bfheader.offset, SEEK_SET);
 
-   uchar image_buffer[biheader.imageSize];
-   fread(image_buffer, 1, biheader.imageSize, fp);
-   printf("width (bytes): %u\n", biheader.imageWidth * 3);
-   printf("padding after x pixels: %d\n", (biheader.imageWidth * 3) % 4);
+   uchar image_buffer[biheader.image_size_bytes];
+   fread(image_buffer, 1, biheader.image_size_bytes, fp);
+   printf("width (bytes): %u\n", biheader.width_px * 3);
+   printf("padding after x pixels: %d\n", (biheader.width_px * 3) % 4);
 
-   invert(image_buffer, biheader.imageSize);
-   invert(image_buffer, biheader.imageSize);
+   invert(image_buffer, biheader.image_size_bytes);
+   invert(image_buffer, biheader.image_size_bytes);
 
    // write image_buffer to dest file
    printf("writing to dest file: '%s'\n", dest);
@@ -97,8 +97,8 @@ int handle_image(char *src, char *dest) {
 
    // actually write the buffer now
    fseek(dest_fp, bfheader.offset, SEEK_SET);
-   size_t bytes_written = fwrite(&image_buffer, 1, biheader.imageSize, dest_fp);
-   assert(bytes_written == biheader.imageSize && "fwrite failed somehow");
+   size_t bytes_written = fwrite(&image_buffer, 1, biheader.image_size_bytes, dest_fp);
+   assert(bytes_written == biheader.image_size_bytes && "fwrite failed somehow");
 
    fclose(fp);
    fclose(dest_fp);
