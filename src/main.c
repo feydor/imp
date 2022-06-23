@@ -60,32 +60,20 @@ int handle_image(char *src, char *dest) {
    fread(&bfheader.reserved2, sizeof(bfheader.reserved2), 1, fp);
    fread(&bfheader.offset, sizeof(bfheader.offset), 1, fp);
 
-   if (bfheader.ftype == BMP_MAGIC)
-      printf("Your image is a BMP file.\n");
+   if (bfheader.ftype == BMP_MAGIC) printf("Your image is a BMP file.\n");
 
-   // second read biheader bytes from file
-   // NOTE: Assuming biheader follows immediately after bfheader
+   // next read biheader bytes from file
    struct bmp_iheader biheader;
-   fread(&biheader.size, sizeof(biheader.size), 1, fp);
-   fread(&biheader.imageWidth, sizeof(biheader.imageWidth), 1, fp);
-   fread(&biheader.imageHeight, sizeof(biheader.imageHeight), 1, fp);
-   fread(&biheader.planes, sizeof(biheader.planes), 1, fp);
-   fread(&biheader.bitsPerPxl, sizeof(biheader.bitsPerPxl), 1, fp);
-   fread(&biheader.compressionType, sizeof(biheader.compressionType), 1, fp);
-   fread(&biheader.imageSize, sizeof(biheader.imageSize), 1, fp);
-   fread(&biheader.XpxlsPerMeter, sizeof(biheader.XpxlsPerMeter), 1, fp);
-   fread(&biheader.YpxlsPerMeter, sizeof(biheader.YpxlsPerMeter), 1, fp);
-   fread(&biheader.colorsUsed, sizeof(biheader.colorsUsed), 1, fp);
-   fread(&biheader.colorsImportant, sizeof(biheader.colorsImportant), 1, fp);
-
+   assert(40 == sizeof(biheader));
+   fread(&biheader, sizeof(biheader), 1, fp);
    printf("image dimensions: %d x %d (w x h px)\n", biheader.imageWidth, biheader.imageHeight);
    printf("image size: %d bytes\n", biheader.imageSize);
    printf("offset to data: %#01X\n", bfheader.offset);
+
    fseek(fp, bfheader.offset, SEEK_SET);
 
    uchar image_buffer[biheader.imageSize];
    fread(image_buffer, 1, biheader.imageSize, fp);
-
    printf("width (bytes): %u\n", biheader.imageWidth * 3);
    printf("padding after x pixels: %d\n", (biheader.imageWidth * 3) % 4);
 
