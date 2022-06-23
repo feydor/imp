@@ -16,6 +16,8 @@
 #define BFHEADER_SIZE 14
 #define BIHEADER_SIZE 40
 
+typedef unsigned char uchar;
+
 // size: 16 bytes (14 bytes  + 2 bytes padding after ftype)
 struct bmp_fheader {
     uint16_t  ftype;        /* specifies the filetype, 0x424D specifies BMP */

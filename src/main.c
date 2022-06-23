@@ -23,7 +23,12 @@ void usage(char *progname) {
    fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
 }
 
-void print_buffer(char *buf, size_t size) {
+void invert(uchar *buf, size_t size) {
+   for (size_t i = 0; i < size; ++i)
+      buf[i] = 255 - buf[i];
+}
+
+void print_buffer(uchar *buf, size_t size) {
    printf("--------------------------\n");
    for (size_t i = 0; i < size; ++i)
       printf("%#01X ", buf[i]);
@@ -31,6 +36,11 @@ void print_buffer(char *buf, size_t size) {
 }
 
 // Assumes Little-endian, 24bit bmp
+// bmp data is stored bottom up, ie
+//   y
+//   |
+//   |
+//   0-------x
 int handle_image(char *src, char *dest) {
    if (!src || !dest) {
       errno = EINVAL;
@@ -73,27 +83,14 @@ int handle_image(char *src, char *dest) {
    printf("offset to data: %#01X\n", bfheader.offset);
    fseek(fp, bfheader.offset, SEEK_SET);
 
-   printf("location of fp, AFTER SEEK: %#01lX\n", ftell(fp));
+   uchar image_buffer[biheader.imageSize];
+   fread(image_buffer, 1, biheader.imageSize, fp);
 
-   unsigned char image_buffer[biheader.imageSize];
-   size_t read = fread(image_buffer, 1, biheader.imageSize, fp);
-   printf("amount read: %ld bytes\n", read);
+   printf("width (bytes): %u\n", biheader.imageWidth * 3);
+   printf("padding after x pixels: %d\n", (biheader.imageWidth * 3) % 4);
 
-   int x_total_bytes = biheader.imageWidth * biheader.bitsPerPxl / 8;
-   int x_image_bytes = x_total_bytes - (x_total_bytes % 4); // padding
-   printf("bytes in x: %d\n", x_total_bytes);
-   printf("padding in x: %d\n", x_total_bytes % 4);
-   printf("bytes in x WITHOUT padding: %d\n", x_image_bytes);
-   printf("pixels in y: %d\n", biheader.imageHeight);
-
-   printf("--------------------------\n");
-   printf("printing image BUFFER, ignoring padding\n");
-   for (int i = 0; i < (int)biheader.imageSize; ++i) {
-      // TODO: find out where padding is located
-      image_buffer[i] = 255 - image_buffer[i];
-      image_buffer[i] = 255 - image_buffer[i];
-   }
-   printf("--------------------------\n");
+   invert(image_buffer, biheader.imageSize);
+   invert(image_buffer, biheader.imageSize);
 
    // write image_buffer to dest file
    printf("writing to dest file: '%s'\n", dest);
