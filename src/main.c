@@ -5,7 +5,6 @@
 #include <stdio.h> /* for FILE, fprint, fread, stdin, stdout, stderr */
 #include <errno.h> /* for external errno variable */
 #include <string.h> /* for memcpy, memset, strlen */
-#include <stdio.h> /* for FILE */
 #include <stdlib.h> /* for stroul, exit() */
 #include <stdint.h> /* for uint32_t */
 #include <stddef.h> /* for size_t */
