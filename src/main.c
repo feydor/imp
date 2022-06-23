@@ -28,6 +28,20 @@ void invert(uchar *buf, size_t size) {
       buf[i] = 255 - buf[i];
 }
 
+int rgb_to_gray(uchar r, uchar g, uchar b) {
+   return (int) (0.2989 * r + 0.5870 * g + 0.1140 * b);
+}
+
+void grayscale(uchar *buf, size_t size_bytes) {
+   size_t adjusted_end = size_bytes - (size_bytes % 3);
+   for (size_t px = 0; px < adjusted_end; px += 3) {
+      uchar gray = rgb_to_gray(buf[px + 2], buf[px + 1], buf[px]);
+      buf[px + 2] = gray;
+      buf[px + 1] = gray;
+      buf[px] = gray;
+   }
+}
+
 void print_buffer(uchar *buf, size_t size) {
    printf("--------------------------\n");
    for (size_t i = 0; i < size; ++i)
@@ -36,11 +50,7 @@ void print_buffer(uchar *buf, size_t size) {
 }
 
 // Assumes Little-endian, 24bit bmp
-// bmp data is stored bottom up, ie
-//   y
-//   |
-//   |
-//   0-------x
+// bmp data is stored starting at bottom-left corner
 int handle_image(char *src, char *dest) {
    if (!src || !dest) {
       errno = EINVAL;
@@ -79,10 +89,11 @@ int handle_image(char *src, char *dest) {
 
    invert(image_buffer, biheader.image_size_bytes);
    invert(image_buffer, biheader.image_size_bytes);
+   grayscale(image_buffer, biheader.image_size_bytes);
 
    // write image_buffer to dest file
    printf("writing to dest file: '%s'\n", dest);
-   FILE *dest_fp = fopen(dest, "wb");
+   FILE *dest_fp = fopen(dest, "w");
    if (!dest_fp) return -1;
 
    // write bfheader and biheader
