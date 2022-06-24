@@ -50,14 +50,34 @@ void print_buffer(uchar *buf, size_t size) {
 }
 
 void read_bmp_headers(FILE *fp, struct bmp_fheader *file_header, struct bmp_iheader *info_header) {
-   assert(40 == sizeof(biheader));
-   fread(file_header->ftype, sizeof(file_header->ftype), 1, fp);   
-   fread(file_header->fsize, sizeof(file_header->fsize), 1, fp);
-   fread(file_header->reserved1, sizeof(file_header->reserved1), 1, fp);
-   fread(file_header->reserved2, sizeof(file_header->reserved2), 1, fp);
-   fread(file_header->offset, sizeof(file_header->offset), 1, fp);
+   assert(40 == sizeof(struct bmp_iheader));
+   fread(&file_header->ftype, sizeof(file_header->ftype), 1, fp);
+   fread(&file_header->fsize, sizeof(file_header->fsize), 1, fp);
+   fread(&file_header->reserved1, sizeof(file_header->reserved1), 1, fp);
+   fread(&file_header->reserved2, sizeof(file_header->reserved2), 1, fp);
+   fread(&file_header->offset, sizeof(file_header->offset), 1, fp);
 
    fread(info_header, sizeof(struct bmp_iheader), 1, fp);
+}
+
+int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_iheader *info_header, uchar *buf) {
+   printf("writing to file: '%s'\n", dest);
+   FILE *dest_fp = fopen(dest, "w");
+   if (!dest_fp) return -1;
+
+   // actually write the buffer now
+   assert(40 == sizeof(struct bmp_iheader));
+   fwrite(&file_header->ftype, sizeof(file_header->ftype), 1, dest_fp);
+   fwrite(&file_header->fsize, sizeof(file_header->fsize), 1, dest_fp);
+   fwrite(&file_header->reserved1, sizeof(file_header->reserved1), 1, dest_fp);
+   fwrite(&file_header->reserved2, sizeof(file_header->reserved2), 1, dest_fp);
+   fwrite(&file_header->offset, sizeof(file_header->offset), 1, dest_fp);
+   fwrite(info_header, sizeof(struct bmp_iheader), 1, dest_fp);
+
+   fseek(dest_fp, file_header->offset, SEEK_SET);
+   fwrite(buf, 1, info_header->image_size_bytes, dest_fp);
+   fclose(dest_fp);
+   return 0;
 }
 
 // Assumes Little-endian, 24bit bmp
@@ -68,7 +88,7 @@ int handle_image(char *src, char *dest) {
       return -1;
    }
 
-   printf("src: %s, dest: %s\n", src, dest);
+   printf("opening the source file: %s\n", src);
    FILE *fp = NULL;
    if (!(fp = fopen(src, "rb")))
       return -1;
@@ -99,18 +119,11 @@ int handle_image(char *src, char *dest) {
    int total_bytes_x = biheader.image_size_bytes / biheader.height_px;
    size_t padding = total_bytes_x - (biheader.width_px * 3);
    printf("padding: %ld bytes/row\n", padding);
-   int padding_count = 0;
    for (size_t i = 0; i < biheader.image_size_bytes; i++) {
       // skip last two n bytes of every row (padding)
-      if (i % total_bytes_x > total_bytes_x - padding - 1) {
-         padding_count++;
-         continue;
-      }
+      if (i % total_bytes_x > total_bytes_x - padding - 1) continue;
       UCharVec_push(&raw_image, image_buffer[i]);
    }
-
-   printf("counted %d bytes of padding\n", padding_count);
-   printf("size of bytes without padding: %d bytes\n", UCharVec_size(&raw_image));
 
    // manipulate vector
    grayscale(raw_image.arr, UCharVec_size(&raw_image));
@@ -137,32 +150,15 @@ int handle_image(char *src, char *dest) {
    for (size_t n = 0; n < padding; ++n) {
       UCharVec_push(&image_with_padding, 0x00);
    }
-   printf("size of bytes with padding: %d bytes\n", UCharVec_size(&image_with_padding));
 
    UCharVec_copyto(&image_with_padding, image_buffer, biheader.image_size_bytes);
 
-   // write image_buffer to dest file
-   printf("writing to file: '%s'\n", dest);
-   FILE *dest_fp = fopen(dest, "w");
-   if (!dest_fp) return -1;
-
-   // write bfheader and biheader
-   fwrite(&bfheader.ftype, sizeof(bfheader.ftype), 1, dest_fp);   
-   fwrite(&bfheader.fsize, sizeof(bfheader.fsize), 1, dest_fp);
-   fwrite(&bfheader.reserved1, sizeof(bfheader.reserved1), 1, dest_fp);
-   fwrite(&bfheader.reserved2, sizeof(bfheader.reserved2), 1, dest_fp);
-   fwrite(&bfheader.offset, sizeof(bfheader.offset), 1, dest_fp);
-
-   // NOTE: biheader is properly aligned, so no padding, so just write the whole struct
-   fwrite(&biheader, sizeof(biheader), 1, dest_fp);
-
-   // actually write the buffer now
-   fseek(dest_fp, bfheader.offset, SEEK_SET);
-   size_t bytes_written = fwrite(&image_buffer, 1, biheader.image_size_bytes, dest_fp);
-   assert(bytes_written == biheader.image_size_bytes && "fwrite failed somehow");
+   // open the output file and write the headers followed by the image data
+   if (write_bmp(dest, &bfheader, &biheader, image_buffer) != 0) {
+      return -1;
+   }
 
    fclose(fp);
-   fclose(dest_fp);
    UCharVec_free(&raw_image);
    UCharVec_free(&image_with_padding);
    return 0;
@@ -189,4 +185,3 @@ int main(int argc, char *argv[]) {
 
    return EXIT_SUCCESS;
 }
-
