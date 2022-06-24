@@ -11,8 +11,9 @@
 #define DEFAULT_PROGNAME "imp"
     
 #define OPTSTR "i:o:f:h"
-#define USAGE_FMT  "Usage: %s [-i inputfile] [-o outputfile] [-f flags] [-h]\nFlags:\n\
-   i     invert\n   g     grayscale\n"
+#define USAGE_FMT  "USAGE:\n    %s [-i inputfile] [-o outputfile] [-f flags] [-h]\n\nFLAGS:\n\
+    i               invert\n    g               grayscale\n\n\
+ARGS:\n    [inputfile]    24bit bmp\n"
 
 #define BFHEADER_SIZE 14
 #define BIHEADER_SIZE 40
