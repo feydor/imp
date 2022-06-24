@@ -49,6 +49,17 @@ void print_buffer(uchar *buf, size_t size) {
    printf("\n--------------------------\n");
 }
 
+void read_bmp_headers(FILE *fp, struct bmp_fheader *file_header, struct bmp_iheader *info_header) {
+   assert(40 == sizeof(biheader));
+   fread(file_header->ftype, sizeof(file_header->ftype), 1, fp);   
+   fread(file_header->fsize, sizeof(file_header->fsize), 1, fp);
+   fread(file_header->reserved1, sizeof(file_header->reserved1), 1, fp);
+   fread(file_header->reserved2, sizeof(file_header->reserved2), 1, fp);
+   fread(file_header->offset, sizeof(file_header->offset), 1, fp);
+
+   fread(info_header, sizeof(struct bmp_iheader), 1, fp);
+}
+
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
 int handle_image(char *src, char *dest) {
@@ -61,31 +72,23 @@ int handle_image(char *src, char *dest) {
    FILE *fp = NULL;
    if (!(fp = fopen(src, "rb")))
       return -1;
-
-   // first read bfheader bytes from file
+   
+   // read headers
    struct bmp_fheader bfheader;
-   fread(&bfheader.ftype, sizeof(bfheader.ftype), 1, fp);   
-   fread(&bfheader.fsize, sizeof(bfheader.fsize), 1, fp);
-   fread(&bfheader.reserved1, sizeof(bfheader.reserved1), 1, fp);
-   fread(&bfheader.reserved2, sizeof(bfheader.reserved2), 1, fp);
-   fread(&bfheader.offset, sizeof(bfheader.offset), 1, fp);
-
-   if (bfheader.ftype == BMP_MAGIC) printf("Your image is a BMP file.\n");
-
-   // next read biheader bytes from file
    struct bmp_iheader biheader;
-   assert(40 == sizeof(biheader));
-   fread(&biheader, sizeof(biheader), 1, fp);
+   read_bmp_headers(fp, &bfheader, &biheader);
+
+   // print header info
+   if (bfheader.ftype == BMP_MAGIC) printf("Your image is a BMP file.\n");
    printf("image dimensions: %d x %d (w x h px)\n", biheader.width_px, biheader.height_px);
    printf("image size: %d bytes\n", biheader.image_size_bytes);
-   printf("offset to data: %#01X\n", bfheader.offset);
-
-   fseek(fp, bfheader.offset, SEEK_SET);
-
-   uchar image_buffer[biheader.image_size_bytes];
-   fread(image_buffer, 1, biheader.image_size_bytes, fp);
    printf("width (including padding): %u bytes\n", biheader.image_size_bytes / biheader.height_px);
 
+   // read the image bytes
+   uchar image_buffer[biheader.image_size_bytes];
+   fseek(fp, bfheader.offset, SEEK_SET);
+   fread(image_buffer, 1, biheader.image_size_bytes, fp);
+   
    // copy to vector, strip padding
    UCharVec raw_image;
    if (UCharVec_init(&raw_image) != 0) {
@@ -139,7 +142,7 @@ int handle_image(char *src, char *dest) {
    UCharVec_copyto(&image_with_padding, image_buffer, biheader.image_size_bytes);
 
    // write image_buffer to dest file
-   printf("writing to dest file: '%s'\n", dest);
+   printf("writing to file: '%s'\n", dest);
    FILE *dest_fp = fopen(dest, "w");
    if (!dest_fp) return -1;
 
@@ -162,7 +165,7 @@ int handle_image(char *src, char *dest) {
    fclose(dest_fp);
    UCharVec_free(&raw_image);
    UCharVec_free(&image_with_padding);
-   return -1;
+   return 0;
 }
 
 int main(int argc, char *argv[]) {
