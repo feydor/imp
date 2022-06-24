@@ -16,7 +16,7 @@ typedef struct {
 int UCharVec_init(UCharVec *vec);
 uint UCharVec_size(UCharVec *vec);
 void UCharVec_push(UCharVec *vec, uchar data);
-uchar UCharVec_get(UCharVec *vec, int i);
+uchar UCharVec_get(UCharVec *vec, uint i);
 void UCharVec_copyto(UCharVec *vec, uchar* dest, uint dest_size);
 void UCharVec_free(UCharVec *vec);
 

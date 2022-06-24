@@ -5,6 +5,7 @@
 
 // on success returns 0
 int UCharVec_init(UCharVec *vec) {
+    assert(vec);
     vec->arr = malloc(sizeof(uchar) * INITIAL_CAPACITY);
     if (!vec->arr) return -1;
     vec->cap = INITIAL_CAPACITY;
@@ -14,6 +15,7 @@ int UCharVec_init(UCharVec *vec) {
 
 // crashes if realloc fails
 void UCharVec_push(UCharVec *vec, uchar data) {
+    assert(vec);
     if (vec->size == vec->cap) {
         vec->arr = realloc(vec->arr, SCALING_FACTOR * vec->cap * sizeof(uchar));
         if (!vec->arr) {
@@ -28,12 +30,14 @@ void UCharVec_push(UCharVec *vec, uchar data) {
 }
 
 uint UCharVec_size(UCharVec *vec) {
+    assert(vec);
     return vec->size;
 }
 
 // crashes when index is out of bounds
-uchar UCharVec_get(UCharVec *vec, int i) {
-    if ((uint)i > vec->size) {
+uchar UCharVec_get(UCharVec *vec, uint i) {
+    assert(vec);
+    if (i > vec->size) {
         fprintf(stderr, "UCharVec_get: index out of bounds, i=%d\n", i);
         exit(EXIT_FAILURE);
     }
@@ -41,8 +45,10 @@ uchar UCharVec_get(UCharVec *vec, int i) {
     return vec->arr[i];
 }
 
+// copy all the elements in vec into the array at dest
 void UCharVec_copyto(UCharVec *vec, uchar* dest, uint dest_size) {
     assert(vec && dest);
+
     if (dest_size != vec->size) {
         fprintf(stderr, "UCharVec_copyto: size of destination does NOT equal vec, dest_size=%d, vec_size=%d\n", dest_size, vec->size);
         exit(EXIT_FAILURE);
@@ -54,6 +60,7 @@ void UCharVec_copyto(UCharVec *vec, uchar* dest, uint dest_size) {
 }
 
 void UCharVec_free(UCharVec *vec) {
+    assert(vec);
     free(vec->arr);
     vec->arr = NULL;
 }
