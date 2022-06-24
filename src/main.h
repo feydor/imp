@@ -10,8 +10,9 @@
 #define ERR_MALLOC_NULL "malloc returned null"
 #define DEFAULT_PROGNAME "imp"
     
-#define OPTSTR "i:o:h"
-#define USAGE_FMT  "Usage: %s [-i inputfile] [-o outputfile] [-h]\n"
+#define OPTSTR "i:o:f:h"
+#define USAGE_FMT  "Usage: %s [-i inputfile] [-o outputfile] [-f flags] [-h]\nFlags:\n\
+   i     invert\n   g     grayscale\n"
 
 #define BFHEADER_SIZE 14
 #define BIHEADER_SIZE 40

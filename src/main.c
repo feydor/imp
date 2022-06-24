@@ -50,7 +50,7 @@ void print_buffer(uchar *buf, size_t size) {
 }
 
 void read_bmp_headers(FILE *fp, struct bmp_fheader *file_header, struct bmp_iheader *info_header) {
-   assert(40 == sizeof(struct bmp_iheader));
+   assert(BIHEADER_SIZE == sizeof(struct bmp_iheader));
    fread(&file_header->ftype, sizeof(file_header->ftype), 1, fp);
    fread(&file_header->fsize, sizeof(file_header->fsize), 1, fp);
    fread(&file_header->reserved1, sizeof(file_header->reserved1), 1, fp);
@@ -66,7 +66,7 @@ int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_iheader *i
    if (!dest_fp) return -1;
 
    // actually write the buffer now
-   assert(40 == sizeof(struct bmp_iheader));
+   assert(BIHEADER_SIZE == sizeof(struct bmp_iheader));
    fwrite(&file_header->ftype, sizeof(file_header->ftype), 1, dest_fp);
    fwrite(&file_header->fsize, sizeof(file_header->fsize), 1, dest_fp);
    fwrite(&file_header->reserved1, sizeof(file_header->reserved1), 1, dest_fp);
@@ -82,7 +82,7 @@ int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_iheader *i
 
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
-int handle_image(char *src, char *dest) {
+int handle_image(char *src, char *dest, char *flags) {
    if (!src || !dest) {
       errno = EINVAL;
       return -1;
@@ -99,7 +99,11 @@ int handle_image(char *src, char *dest) {
    read_bmp_headers(fp, &bfheader, &biheader);
 
    // print header info
-   if (bfheader.ftype == BMP_MAGIC) printf("Your image is a BMP file.\n");
+   if (bfheader.ftype != BMP_MAGIC) {
+      errno = EINVAL;
+      return -1;
+   }
+
    printf("image dimensions: %d x %d (w x h px)\n", biheader.width_px, biheader.height_px);
    printf("image size: %d bytes\n", biheader.image_size_bytes);
    printf("width (including padding): %u bytes\n", biheader.image_size_bytes / biheader.height_px);
@@ -126,7 +130,17 @@ int handle_image(char *src, char *dest) {
    }
 
    // manipulate vector
-   grayscale(raw_image.arr, UCharVec_size(&raw_image));
+   if (flags) {
+      if (strstr(flags, "g") != NULL) {
+         printf("performing grayscale...\n");
+         grayscale(raw_image.arr, UCharVec_size(&raw_image));
+      }
+
+      if (strstr(flags, "i") != NULL) {
+         printf("performing invert...\n");
+         invert(raw_image.arr, UCharVec_size(&raw_image));
+      }
+   }
 
    // back to buffer, add padding
    UCharVec image_with_padding;
@@ -169,16 +183,18 @@ int main(int argc, char *argv[]) {
    opterr = 0;
    char *src = DEFAULT_SRC;
    char *dest = DEFAULT_DEST;
+   char *flags = NULL;
 
    while ((opt = getopt(argc, argv, OPTSTR)) != EOF)
       switch(opt) {
          case 'i': src = optarg; break;
          case 'o': dest = optarg; break;
+         case 'f': flags = optarg; break;
          case 'h':
          default: usage(basename(argv[0])); exit(0);
       }
 
-   if (handle_image(src, dest) != 0) {
+   if (handle_image(src, dest, flags) != 0) {
       perror(ERR_HANDLEIMAGE); // error message is chosen based on value of errno before this
       exit(EXIT_FAILURE);
    }
