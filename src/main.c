@@ -16,16 +16,15 @@
 extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
-
 static char *DEFAULT_SRC = "../lol.bmp";
 static char *DEFAULT_DEST = "../RESULT.bmp";
 static int BMP_MAGIC = 0x4D42;
 
-void usage(char *progname) {
+static void usage(char *progname) {
    fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
 }
 
-void read_bmp_headers(FILE *fp, struct bmp_fheader *file_header, struct bmp_iheader *info_header) {
+static void read_bmp_headers(FILE *fp, struct bmp_fheader *file_header, struct bmp_iheader *info_header) {
    assert(BIHEADER_SIZE == sizeof(struct bmp_iheader));
    fread(&file_header->ftype, sizeof(file_header->ftype), 1, fp);
    fread(&file_header->fsize, sizeof(file_header->fsize), 1, fp);
@@ -36,7 +35,7 @@ void read_bmp_headers(FILE *fp, struct bmp_fheader *file_header, struct bmp_ihea
    fread(info_header, sizeof(struct bmp_iheader), 1, fp);
 }
 
-int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_iheader *info_header, uchar *buf) {
+static int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_iheader *info_header, uchar *buf) {
    printf("writing to file: '%s'\n", dest);
    FILE *dest_fp = fopen(dest, "w");
    if (!dest_fp) return -1;
@@ -58,7 +57,7 @@ int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_iheader *i
 
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
-int handle_image(char *src, char *dest, char *flags) {
+static int handle_image(char *src, char *dest, char *flags) {
    if (!src || !dest) {
       errno = EINVAL;
       return -1;
@@ -79,7 +78,6 @@ int handle_image(char *src, char *dest, char *flags) {
       errno = EINVAL;
       return -1;
    }
-
    printf("image dimensions: %d x %d (w x h px)\n", biheader.width_px, biheader.height_px);
    printf("image size: %d bytes\n", biheader.image_size_bytes);
    printf("width (including padding): %u bytes\n", biheader.image_size_bytes / biheader.height_px);
@@ -98,7 +96,6 @@ int handle_image(char *src, char *dest, char *flags) {
 
    int total_bytes_x = biheader.image_size_bytes / biheader.height_px;
    size_t padding = total_bytes_x - (biheader.width_px * 3);
-   printf("padding: %ld bytes/row\n", padding);
    for (size_t i = 0; i < biheader.image_size_bytes; i++) {
       // skip last two n bytes of every row (padding)
       if (i % total_bytes_x > total_bytes_x - padding - 1) continue;
