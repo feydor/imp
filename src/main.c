@@ -9,6 +9,7 @@
 #include <stdint.h> /* for uint32_t */
 #include <stddef.h> /* for size_t */
 #include "main.h"
+#include "vector.h"
 
 extern int errno;
 extern char *optarg; /* for use with getopt() */
@@ -83,12 +84,59 @@ int handle_image(char *src, char *dest) {
 
    uchar image_buffer[biheader.image_size_bytes];
    fread(image_buffer, 1, biheader.image_size_bytes, fp);
-   printf("width (bytes): %u\n", biheader.width_px * 3);
-   printf("padding after x pixels: %d\n", (biheader.width_px * 3) % 4);
+   printf("width (including padding): %u bytes\n", biheader.image_size_bytes / biheader.height_px);
 
-   invert(image_buffer, biheader.image_size_bytes);
-   invert(image_buffer, biheader.image_size_bytes);
-   grayscale(image_buffer, biheader.image_size_bytes);
+   // copy to vector, strip padding
+   UCharVec raw_image;
+   if (UCharVec_init(&raw_image) != 0) {
+      perror("UCharVec_init failed");
+      exit(EXIT_FAILURE);
+   }
+
+   int total_bytes_x = biheader.image_size_bytes / biheader.height_px;
+   size_t padding = total_bytes_x - (biheader.width_px * 3);
+   printf("padding: %ld bytes/row\n", padding);
+   int padding_count = 0;
+   for (size_t i = 0; i < biheader.image_size_bytes; i++) {
+      // skip last two n bytes of every row (padding)
+      if (i % total_bytes_x > total_bytes_x - padding - 1) {
+         padding_count++;
+         continue;
+      }
+      UCharVec_push(&raw_image, image_buffer[i]);
+   }
+
+   printf("counted %d bytes of padding\n", padding_count);
+   printf("size of bytes without padding: %d bytes\n", UCharVec_size(&raw_image));
+
+   // manipulate vector
+   grayscale(raw_image.arr, UCharVec_size(&raw_image));
+
+   // back to buffer, add padding
+   UCharVec image_with_padding;
+   if (UCharVec_init(&image_with_padding) != 0) {
+      perror("UCharVec_init failed");
+      exit(EXIT_FAILURE);
+   }
+
+   for (size_t i = 0; i < UCharVec_size(&raw_image); ++i) {
+      // every xth byte, add back in padding
+      if (i != 0 && i % (total_bytes_x - padding) == 0) {
+         for (size_t n = 0; n < padding; ++n) {
+            UCharVec_push(&image_with_padding, 0x00);
+         }
+      } 
+      
+      UCharVec_push(&image_with_padding, UCharVec_get(&raw_image, i));
+   }
+
+   // add EOF padding bytes
+   for (size_t n = 0; n < padding; ++n) {
+      UCharVec_push(&image_with_padding, 0x00);
+   }
+   printf("size of bytes with padding: %d bytes\n", UCharVec_size(&image_with_padding));
+
+   UCharVec_copyto(&image_with_padding, image_buffer, biheader.image_size_bytes);
 
    // write image_buffer to dest file
    printf("writing to dest file: '%s'\n", dest);
@@ -112,6 +160,8 @@ int handle_image(char *src, char *dest) {
 
    fclose(fp);
    fclose(dest_fp);
+   UCharVec_free(&raw_image);
+   UCharVec_free(&image_with_padding);
    return -1;
 }
 

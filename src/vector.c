@@ -33,12 +33,24 @@ uint UCharVec_size(UCharVec *vec) {
 
 // crashes when index is out of bounds
 uchar UCharVec_get(UCharVec *vec, int i) {
-    if (i > vec->size) {
-        fprintf(stderr, "UCharVec_get: index out of bounds %d\n", i);
+    if ((uint)i > vec->size) {
+        fprintf(stderr, "UCharVec_get: index out of bounds, i=%d\n", i);
         exit(EXIT_FAILURE);
     }
 
     return vec->arr[i];
+}
+
+void UCharVec_copyto(UCharVec *vec, uchar* dest, uint dest_size) {
+    assert(vec && dest);
+    if (dest_size != vec->size) {
+        fprintf(stderr, "UCharVec_copyto: size of destination does NOT equal vec, dest_size=%d, vec_size=%d\n", dest_size, vec->size);
+        exit(EXIT_FAILURE);
+    }
+
+    for (size_t i = 0; i < dest_size; ++i) {
+        dest[i] = vec->arr[i];
+    }
 }
 
 void UCharVec_free(UCharVec *vec) {
@@ -61,7 +73,7 @@ int example(void) {
     UCharVec_push(&vec, 0x01);
     UCharVec_push(&vec, 0x05);
 
-    for (int i = 0; i < UCharVec_size(&vec); ++i) {
+    for (uint i = 0; i < UCharVec_size(&vec); ++i) {
         uchar data = UCharVec_get(&vec, i);
         printf("%d: %X\n", i, data);
     }
