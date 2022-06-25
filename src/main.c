@@ -16,8 +16,6 @@
 extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
-static char *DEFAULT_SRC = "../lol.bmp";
-static char *DEFAULT_DEST = "../RESULT.bmp";
 static int BMP_MAGIC = 0x4D42;
 
 static void usage(char *progname) {
@@ -166,11 +164,11 @@ int main(int argc, char *argv[]) {
    srand(time(NULL));
    int opt;
    opterr = 0;
-   char *src = DEFAULT_SRC;
-   char *dest = DEFAULT_DEST;
+   char *src = NULL;
+   char *dest = NULL;
    char *flags = NULL;
 
-   while ((opt = getopt(argc, argv, OPTSTR)) != EOF)
+   while ((opt = getopt(argc, argv, OPTSTR)) != EOF) {
       switch(opt) {
          case 'i': src = optarg; break;
          case 'o': dest = optarg; break;
@@ -178,6 +176,12 @@ int main(int argc, char *argv[]) {
          case 'h':
          default: usage(basename(argv[0])); exit(0);
       }
+   }
+
+   if (!src && !dest) {
+      usage(basename(argv[0]));
+      exit(0);
+   }
 
    if (handle_image(src, dest, flags) != 0) {
       perror(ERR_HANDLEIMAGE); // error message is chosen based on value of errno before this

@@ -9,12 +9,16 @@ USAGE:
 FLAGS:
     i               invert
     g               grayscale
+    d               ordered dithering
+    n               uniform noise
 
 ARGS:
     [inputfile]    24bit bmp
 ```
 
 ## results
+![some results](/res/some-results.png)
+*from left to right: original, ordered dithering, inversion, uniform noise, dithering + palette quantization, several filters*
 
 ## build
 ```console
@@ -22,5 +26,5 @@ git clone https://github.com/feydor/imp
 cd imp
 mkdir build && cd build
 ./../build.sh
-./imp -i ../smiles.bmp -o ../RESULT.bmp -f ig
+./imp -i ../david.bmp -o ../result.bmp -f igdn
 ```
