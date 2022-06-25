@@ -113,9 +113,12 @@ static int handle_image(char *src, char *dest, char *flags) {
          printf("performing invert...\n");
          invert(raw_image.arr, UCharVec_size(&raw_image));
       }
-   }
 
-   ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px);
+      if (strstr(flags, "d") != NULL) {
+         printf("dithering...\n");
+         ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px);
+      }
+   }
 
    // back to buffer, add padding
    UCharVec image_with_padding;
