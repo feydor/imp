@@ -12,7 +12,7 @@
     
 #define OPTSTR "i:o:f:h"
 #define USAGE_FMT  "USAGE:\n    %s [-i inputfile] [-o outputfile] [-f flags] [-h]\n\nFLAGS:\n\
-    i               invert\n    g               grayscale\n    d               ordered dithering\n\
+    i               invert\n    g               grayscale\n    d               ordered dithering\n    n               uniform noise\n\n\
 ARGS:\n    [inputfile]    24bit bmp\n"
 
 #define BFHEADER_SIZE 14

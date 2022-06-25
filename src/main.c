@@ -104,11 +104,6 @@ static int handle_image(char *src, char *dest, char *flags) {
 
    // manipulate vector
    if (flags) {
-      if (strstr(flags, "g") != NULL) {
-         printf("performing grayscale...\n");
-         grayscale(raw_image.arr, UCharVec_size(&raw_image));
-      }
-
       if (strstr(flags, "i") != NULL) {
          printf("performing invert...\n");
          invert(raw_image.arr, UCharVec_size(&raw_image));
@@ -117,6 +112,16 @@ static int handle_image(char *src, char *dest, char *flags) {
       if (strstr(flags, "d") != NULL) {
          printf("dithering...\n");
          ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px);
+      }
+
+      if (strstr(flags, "n") != NULL) {
+         printf("applying uniform noise...");
+         add_uniform_bernoulli_noise(raw_image.arr, UCharVec_size(&raw_image));
+      }
+
+      if (strstr(flags, "g") != NULL) {
+         printf("performing grayscale...\n");
+         grayscale(raw_image.arr, UCharVec_size(&raw_image));
       }
    }
 
