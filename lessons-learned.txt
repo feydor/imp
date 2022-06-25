@@ -1,8 +1,0 @@
-1. The IMUL instruction (unsigned multiplication) can take two operands
-as opposed to the MUL instruction only being able to take one. The cost
-is that the result is truncated to fit the destination register's length. 
-So that no significant bits are lost, it is good practice to immediatly 
-check the CF {carry} or OF (overflow) flags. In this program, 
-the maximum possible result of an IMUL instruction fits safely within
-a single byte. Use of this instruction conserved the use of RDX and 
-limited the number of MOV instructions.

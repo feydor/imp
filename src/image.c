@@ -129,7 +129,7 @@ void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels) {
         int new_red = buf[px + 2] + spread * (bayer_matrix[y % matrix_dim][x % matrix_dim]);
         int new_green = buf[px + 1] + spread * (bayer_matrix[y % matrix_dim][x % matrix_dim]);
         int new_blue = buf[px] + spread * (bayer_matrix[y % matrix_dim][x % matrix_dim]);
-        // nearest_palette_color(&new_red, &new_green, &new_blue);
+        nearest_palette_color(&new_red, &new_green, &new_blue);
         
         buf[px + 2] = new_red;
         buf[px + 1] = new_green;
