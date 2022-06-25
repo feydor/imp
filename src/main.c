@@ -102,6 +102,11 @@ static int handle_image(char *src, char *dest, char *flags) {
 
    // manipulate vector
    if (flags) {
+      if (strstr(flags, "p") != NULL) {
+         printf("performing palette quantization...\n");
+         palette_quantization(raw_image.arr, UCharVec_size(&raw_image));
+      }
+
       if (strstr(flags, "i") != NULL) {
          printf("performing invert...\n");
          invert(raw_image.arr, UCharVec_size(&raw_image));
@@ -113,7 +118,7 @@ static int handle_image(char *src, char *dest, char *flags) {
       }
 
       if (strstr(flags, "n") != NULL) {
-         printf("applying uniform noise...");
+         printf("applying uniform noise...\n");
          add_uniform_bernoulli_noise(raw_image.arr, UCharVec_size(&raw_image));
       }
 

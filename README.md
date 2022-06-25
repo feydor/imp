@@ -17,7 +17,7 @@ ARGS:
 ```
 
 ## results
-![some results](/res/some-results.png)
+![some results](/res/some-results.png)<br />
 *from left to right: original, ordered dithering, inversion, uniform noise, dithering + palette quantization, several filters*
 
 ## build

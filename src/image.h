@@ -11,5 +11,5 @@ void invert(uchar *buf, size_t size);
 void add_uniform_bernoulli_noise(uchar *buf, size_t size_bytes);
 void grayscale(uchar *buf, size_t size_bytes);
 void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels);
-
+void palette_quantization(uchar *buf, size_t size_bytes);
 #endif
