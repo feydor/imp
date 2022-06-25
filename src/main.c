@@ -115,6 +115,8 @@ static int handle_image(char *src, char *dest, char *flags) {
       }
    }
 
+   ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px);
+
    // back to buffer, add padding
    UCharVec image_with_padding;
    if (UCharVec_init(&image_with_padding) != 0) {
