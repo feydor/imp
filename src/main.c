@@ -102,29 +102,33 @@ static int handle_image(char *src, char *dest, char *flags) {
 
    // manipulate vector
    if (flags) {
-      if (strstr(flags, "p") != NULL) {
-         printf("performing palette quantization...\n");
-         palette_quantization(raw_image.arr, UCharVec_size(&raw_image));
-      }
-
-      if (strstr(flags, "i") != NULL) {
-         printf("performing invert...\n");
-         invert(raw_image.arr, UCharVec_size(&raw_image));
-      }
-
-      if (strstr(flags, "d") != NULL) {
-         printf("dithering...\n");
-         ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px);
-      }
-
-      if (strstr(flags, "n") != NULL) {
-         printf("applying uniform noise...\n");
-         add_uniform_bernoulli_noise(raw_image.arr, UCharVec_size(&raw_image));
-      }
-
-      if (strstr(flags, "g") != NULL) {
-         printf("performing grayscale...\n");
-         grayscale(raw_image.arr, UCharVec_size(&raw_image));
+      for (size_t i = 0; i < strlen(flags); ++i) {
+         char flag = flags[i];
+         switch (flag) {
+            case 'd':
+               printf("performing ordered dithering...\n");
+               ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px);
+               break;
+            case 'g':
+               printf("performing grayscale...\n");
+               grayscale(raw_image.arr, UCharVec_size(&raw_image));
+               break;
+            case 'i':
+               printf("performing invert...\n");
+               invert(raw_image.arr, UCharVec_size(&raw_image));
+               break;
+            case 'n':
+               printf("applying uniform noise...\n");
+               add_uniform_bernoulli_noise(raw_image.arr, UCharVec_size(&raw_image));
+               break;
+            case 'p':
+               printf("performing palette quantization...\n");
+               palette_quantization(raw_image.arr, UCharVec_size(&raw_image));
+               break;
+            default:
+               printf("'%c' is not a valid flag\n", flag);
+               break;
+         }
       }
    }
 

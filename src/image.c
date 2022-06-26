@@ -59,7 +59,7 @@ static void nearest_palette_color(uchar *red, uchar *green, uchar* blue) {
     assert(red && green && blue);
 
     // TODO: Get a different palette, perhaps user included via csv
-    int32_t palette[] = {0xf8f9fa, 0xe9ecef, 0xdee2e6, 0xced4da, 0xadb5bd, 0x6c757d, 0x495057, 0x343a40, 0x212529};
+    int32_t palette[] = {0x0d1b2a,0x1b263b,0x415a77,0x778da9,0xe0e1dd};
 
     // find the color in the palette that is 'closest' to the input
     // use euclidean RGB distances to determine closeness
