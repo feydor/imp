@@ -20,7 +20,7 @@ extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
 static int BMP_MAGIC = 0x4D42;
 
-static void usage(char *progname) {
+static void usage(const char *progname) {
    fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
 }
 
@@ -35,7 +35,7 @@ static void read_bmp_headers(FILE *fp, struct bmp_fheader *file_header, struct b
    fread(info_header, sizeof(struct bmp_iheader), 1, fp);
 }
 
-static int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_iheader *info_header, uchar *buf) {
+static int write_bmp(const char *dest, struct bmp_fheader *file_header, struct bmp_iheader *info_header, const uchar *buf) {
    printf("writing to file: '%s'\n", dest);
    FILE *dest_fp = fopen(dest, "w");
    if (!dest_fp) return -1;
@@ -58,24 +58,24 @@ static int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_ihe
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
 // flags and palette are optional
-static int handle_image(char *src, char *dest, char *flags, char *palette) {
+static int handle_image(const char *src, const char *dest, const char *flags, const char *palette) {
    if (!src || !dest) {
       errno = EINVAL;
       return -1;
    }
 
-   FILE *palette_file = NULL;
    U32Vec palette_buffer;
    U32Vec_init(&palette_buffer);
    if (palette) {
-      if (!(palette_file = fopen(palette, "r"))) {
+      FILE *palette_fp = NULL;
+      if (!(palette_fp = fopen(palette, "r"))) {
          fprintf(stderr, "Palette file not found: '%s'\n", palette);
          return -1;
       }
-      
+
       int MAX_CHARS = 1024;
       char line[MAX_CHARS];
-      while (fgets(line, MAX_CHARS, palette_file)) {
+      while (fgets(line, MAX_CHARS, palette_fp)) {
          char *tok = NULL;
          tok = strtok(line, ",");
          while (tok && isalnum(*tok)) {
@@ -84,6 +84,7 @@ static int handle_image(char *src, char *dest, char *flags, char *palette) {
             tok = strtok(NULL, ",");
          }
       }
+      fclose(palette_fp);
    } else {
       uint32_t default_palette[] = {0xf8f9fa,0xe9ecef,0xdee2e6,0xced4da,0xadb5bd,0x6c757d,0x495057,0x343a40,0x212529};
       U32Vec_from(&palette_buffer, default_palette, sizeof(default_palette) / sizeof(default_palette[0]));

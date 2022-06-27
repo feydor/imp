@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "image.h"
+#define rgb_red(rgb) ((rgb & 0xFF0000) >> 16)
+#define rgb_green(rgb) ((rgb & 0x00FF00) >> 8)
+#define rgb_blue(rgb) (rgb & 0x0000FF)
 
 static int max(int a, int b) {
    return a > b ? a : b;
@@ -52,6 +55,32 @@ void grayscale(uchar *buf, size_t size_bytes) {
       buf[px + 2] = gray;
       buf[px + 1] = gray;
       buf[px] = gray;
+   }
+}
+
+int distance_rgb(int32_t tone1, int32_t tone2) {
+   return sqrt( pow(abs(rgb_red(tone1) - rgb_red(tone2)), 2) +
+                pow(abs(rgb_green(tone1) - rgb_green(tone2)), 2) +
+                pow(abs(rgb_blue(tone1) - rgb_blue(tone2)), 2) );
+}
+
+void two_tone(uchar *buf, size_t bytes, uint32_t tone1, uint32_t tone2) {
+   size_t adjusted_end = bytes - (bytes % 3);
+   for (size_t px = 0; px < adjusted_end; px += 3) {
+      uint32_t pixel = 0;
+      pixel = (buf[px + 2] << 16) | (buf[px + 1] << 8) | buf[px];
+      int dist1 = distance_rgb(tone1, pixel);
+      int dist2 = distance_rgb(tone2, pixel);
+
+      if (dist1 > dist2) {
+         buf[px + 2] = (tone1 & 0xFF0000) >> 16;
+         buf[px + 1] = (tone1 & 0x00FF00) >> 8;;
+         buf[px] = tone1 & 0x0000FF;
+      } else {
+         buf[px + 2] = (tone2 & 0xFF0000) >> 16;
+         buf[px + 1] = (tone2 & 0x00FF00) >> 8;;
+         buf[px] = tone2 & 0x0000FF;
+      }
    }
 }
 
