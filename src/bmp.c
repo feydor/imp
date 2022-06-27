@@ -42,6 +42,7 @@ void BMP_print_dimensions(BMP_file *bmp) {
 
 int BMP_load(BMP_file *bmp, const char *src) {
     assert(bmp && src);
+    printf("loading from file: '%s'\n", src);
     FILE *fp = NULL;
     if (!(fp = fopen(src, "rb"))) {
         bmp_err = NOT_FOUND;
@@ -86,6 +87,7 @@ int BMP_load(BMP_file *bmp, const char *src) {
 int BMP_write(BMP_file *bmp, const char *dest) {
     assert(bmp && dest);
     assert(INFOHEADER_SIZE == sizeof(BMP_info_header));
+    printf("writing to file: '%s'\n", dest);
 
     FILE *fp = NULL;
     if (!(fp = fopen(dest, "wb"))) {

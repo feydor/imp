@@ -106,8 +106,9 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
    if (BMP_load(&bmp_file, src) != 0) {
       return -1;
    }
+   BMP_print_dimensions(&bmp_file);
 
-   // copy image data to buffer, strip the end of row padding
+   // copy image data to buffer, strip end of row padding
    UCharVec image_buffer;
    UCharVec_init(&image_buffer);
    int width_bytes = bmp_file.image_size_bytes / bmp_file.height_px;
@@ -152,7 +153,7 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
       }
    }
 
-   // back to output buffer, restore padding
+   // back to output buffer, restore end of row padding
    imagebuf_to_outputbuf(&image_buffer, bmp_file.raw_image, bmp_file.image_size_bytes, width_bytes, padding);
    
    // open the output file and write the headers followed by the image data
@@ -203,7 +204,7 @@ int main(int argc, char *argv[]) {
    }
 
    if (handle_image(src, dest, flags, palette) != 0) {
-      perror(ERR_HANDLEIMAGE); // error message is chosen based on value of errno before this
+      perror(ERR_HANDLEIMAGE);
       exit(EXIT_FAILURE);
    }
 
