@@ -68,6 +68,7 @@ static int handle_image(char *src, char *dest, char *flags, char *palette) {
    U32Vec_init(&palette_buffer);
    if (palette) {
       if (!(palette_file = fopen(palette, "r"))) {
+         fprintf(stderr, "Palette file not found: '%s'\n", palette);
          return -1;
       }
       int MAX_CHARS = 1024;
@@ -92,8 +93,10 @@ static int handle_image(char *src, char *dest, char *flags, char *palette) {
 
    printf("opening the source file: %s\n", src);
    FILE *fp = NULL;
-   if (!(fp = fopen(src, "rb")))
+   if (!(fp = fopen(src, "rb"))) {
+      fprintf(stderr, "Input file not found: '%s'\n", src);
       return -1;
+   }
    
    // read headers
    struct bmp_fheader bfheader;
@@ -102,12 +105,11 @@ static int handle_image(char *src, char *dest, char *flags, char *palette) {
 
    // print header info
    if (bfheader.ftype != BMP_MAGIC) {
-      errno = EINVAL;
+      fprintf(stderr, "Not a BMP file: '%s'\n", src);
       return -1;
    }
    printf("image dimensions: %d x %d (w x h px)\n", biheader.width_px, biheader.height_px);
    printf("image size: %d bytes\n", biheader.image_size_bytes);
-   printf("width (including padding): %u bytes\n", biheader.image_size_bytes / biheader.height_px);
 
    // read the image bytes
    uchar image_buffer[biheader.image_size_bytes];
@@ -204,7 +206,7 @@ int main(int argc, char *argv[]) {
    srand(time(NULL));
    int opt = 0, option_index = 0;
    opterr = 0;
-   char *src, *dest, *palette, *flags;
+   char *src = NULL, *dest = NULL, *palette = NULL, *flags = NULL;
 
    while ((opt = getopt_long(argc, argv, OPTSTR, long_options, &option_index)) != -1) {
       switch(opt) {
