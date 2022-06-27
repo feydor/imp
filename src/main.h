@@ -11,10 +11,11 @@
 #define DEFAULT_PROGNAME "imp"
     
 #define OPTSTR "i:o:p:f:h"
-#define USAGE_FMT  "USAGE:\n    %s [input file] [-o output file] [-p palette file] [-f flags] [-h]\n\nFLAGS:\n\
-    i               invert\n    g               grayscale\n    d               ordered dithering\n    n               uniform noise\n\
-    p               palette quantization\n\n\
-ARGS:\n    [input file]    24bit bmp\n    [palette file]    csv file\n"
+#define USAGE_FMT "Usage: %s [OPTIONS] INPUT\n\nOptions:\n\
+    -h, --help               Display this message\n    -f, --flags              Image processing passes\n\
+    -i, --input              Input filename\n    -o, --output             Write output to filename\n\n\
+Flags:\n     d     ordered dithering\n     g     grayscale\n     i     invert\n     n     uniform noise\n\
+     p     palette quantization\n"
 
 static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
