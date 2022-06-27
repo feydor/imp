@@ -1,4 +1,6 @@
 #!/bin/sh
 set -xe
+SRC="../src/main.c ../src/vector.c ../src/image.c ../src/bmp.c"
+CFLAGS="-Wall -Wextra -Wshadow -g"
 
-cc -Wall -Wextra -Wshadow -g ../src/main.c ../src/vector.c ../src/image.c -I../src -o imp -lm
+cc $CFLAGS $SRC -I../src -o imp -lm
