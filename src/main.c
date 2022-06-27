@@ -1,5 +1,6 @@
 /* main.c - the program's UNIX interface */
 #include <assert.h> /* for assert() */
+#include <ctype.h> /* for isdigit() */
 #include <libgen.h> /* for basename() */
 #include <getopt.h> /* for external optarg, opterr, optind, getopt() */
 #include <stdio.h> /* for FILE, fprint, fread, stdin, stdout, stderr */
@@ -71,19 +72,16 @@ static int handle_image(char *src, char *dest, char *flags, char *palette) {
          fprintf(stderr, "Palette file not found: '%s'\n", palette);
          return -1;
       }
+      
       int MAX_CHARS = 1024;
       char line[MAX_CHARS];
-      if (fgets(line, MAX_CHARS, palette_file)) {
-         char *tok;
-         strtok(line, ",");
-         while ((tok = strtok(NULL, ","))) {
-            char **invalid_input = NULL;
-            uint32_t n = strtoul(tok, invalid_input, 16);
-            if (invalid_input) {
-               fprintf(stderr, "invalid character in palette file\n");
-               return -1;
-            }
+      while (fgets(line, MAX_CHARS, palette_file)) {
+         char *tok = NULL;
+         tok = strtok(line, ",");
+         while (tok && isalnum(*tok)) {
+            uint32_t n = strtoul(tok, NULL, 16);
             U32Vec_push(&palette_buffer, n);
+            tok = strtok(NULL, ",");
          }
       }
    } else {
