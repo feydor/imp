@@ -32,17 +32,17 @@ static struct option long_options[] = {
 typedef unsigned char uchar;
 
 // size: 16 bytes (14 bytes  + 2 bytes padding after ftype)
-struct bmp_fheader {
+typedef struct {
     uint16_t  ftype;        /* specifies the filetype, 0x424D specifies BMP */
     uint32_t  fsize;        /* specifies the total size in bytes, header + data */
     uint16_t  reserved1;    /* reserved, must be 0 */
     uint16_t  reserved2;    /* reserved, must be 0 */
     uint32_t  offset;       /* specifies the offset in bytes from header to data */
-};
+} BMP_file_header;
 
 // for use with 24bit bitmap with pixel format RGB24
 // size: 40 bytes
-struct bmp_iheader {
+typedef struct {
     uint32_t  header_size;        /* specifies the size of the info header in bytes */
     uint32_t  width_px;       /* specifies width in pixels */
     uint32_t  height_px;      /* specifies height in pixels */
@@ -54,7 +54,20 @@ struct bmp_iheader {
     uint32_t  y_resolution_ppm; /* specifies the number of pixels per meter, y axis */
     uint32_t  colors_used;      /* number of colors used */
     uint32_t  colors_important; /* number of colors that are important */
-};
+} BMP_info_header;
+
+/**
+ * @brief holds the two headers and the raw image data for IO, data MUST include padding bytes
+ * see https://en.wikipedia.org/wiki/BMP_file_format#Example_1
+ */
+typedef struct {
+    BMP_file_header fheader;
+    BMP_info_header iheader;
+    uchar *raw_image;
+    unsigned width_px;
+    unsigned height_px;
+    size_t image_size_bytes;
+} BMP_file;
 
 #endif
 
