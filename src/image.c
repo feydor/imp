@@ -55,19 +55,15 @@ void grayscale(uchar *buf, size_t size_bytes) {
    }
 }
 
-static void nearest_palette_color(uchar *red, uchar *green, uchar* blue) {
-    assert(red && green && blue);
-
-    // TODO: Get a different palette, perhaps user included via csv
-    int32_t palette[] = {0x0d1b2a,0x1b263b,0x415a77,0x778da9,0xe0e1dd};
+static void nearest_palette_color(uint32_t *palette, size_t palette_size, uchar *red, uchar *green, uchar* blue) {
+    assert(red && green && blue && palette);
 
     // find the color in the palette that is 'closest' to the input
     // use euclidean RGB distances to determine closeness
     uchar r = 0, g = 0, b = 0;
     int32_t closest_color = 0;
     double distance = 0.0, min = DBL_MAX;
-    int palette_size = sizeof(palette) / sizeof(palette[0]);
-    for (int i = 0; i < palette_size; ++i) {
+    for (size_t i = 0; i < palette_size; ++i) {
         r = (palette[i] & 0xFF0000) >> 16;
         g = (palette[i] & 0x00FF00) >> 8;
         b = palette[i] & 0x0000FF;
@@ -93,7 +89,7 @@ static void nearest_palette_color(uchar *red, uchar *green, uchar* blue) {
  * M = threshold map
  * (1/2 is the normalizing term)
  */
-void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels) {
+void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels, uint32_t *palette, size_t palette_size) {
     // From wikipedia article on ordered dithering: https://en.wikipedia.org/wiki/Ordered_dithering
     int matrix_dim = 4;
     float bayer_matrix[4][4] = {
@@ -126,16 +122,16 @@ void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels) {
         uchar new_red = (new_color & 0xFF0000) >> 16;
         uchar new_green = (new_color & 0x00FF00) >> 8;
         uchar new_blue = new_color & 0x0000FF;
-        nearest_palette_color(&new_red, &new_green, &new_blue);
+        nearest_palette_color(palette, palette_size, &new_red, &new_green, &new_blue);
         buf[px + 2] = new_red;
         buf[px + 1] = new_green;
         buf[px] = new_blue;
     }
 }
 
-void palette_quantization(uchar *buf, size_t size_bytes) {
+void palette_quantization(uchar *buf, size_t size_bytes, uint32_t *palette_buf, size_t palette_buf_size) {
    size_t adjusted_end = size_bytes - (size_bytes % 3);
    for (size_t px = 0; px < adjusted_end; px += 3) {
-      nearest_palette_color(&buf[px + 2], &buf[px + 1], &buf[px]);
+      nearest_palette_color(palette_buf, palette_buf_size, &buf[px + 2], &buf[px + 1], &buf[px]);
    }
 }

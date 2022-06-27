@@ -10,11 +10,11 @@
 #define ERR_MALLOC_NULL "malloc returned null"
 #define DEFAULT_PROGNAME "imp"
     
-#define OPTSTR "i:o:f:h"
-#define USAGE_FMT  "USAGE:\n    %s [-i inputfile] [-o outputfile] [-f flags] [-h]\n\nFLAGS:\n\
+#define OPTSTR "i:o:p:f:h"
+#define USAGE_FMT  "USAGE:\n    %s [-i input file] [-o output file] [-p palette file] [-f flags] [-h]\n\nFLAGS:\n\
     i               invert\n    g               grayscale\n    d               ordered dithering\n    n               uniform noise\n\
     p               palette quantization\n\n\
-ARGS:\n    [inputfile]    24bit bmp\n"
+ARGS:\n    [input file]    24bit bmp\n    [palette file]    csv file"
 
 #define BFHEADER_SIZE 14
 #define BIHEADER_SIZE 40

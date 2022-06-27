@@ -1,12 +1,13 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "vector.h"
 
 // on success returns 0
 int UCharVec_init(UCharVec *vec) {
     assert(vec);
-    vec->arr = malloc(sizeof(uchar) * INITIAL_CAPACITY);
+    vec->arr = calloc(INITIAL_CAPACITY, sizeof(uchar));
     if (!vec->arr) return -1;
     vec->cap = INITIAL_CAPACITY;
     vec->size = 0;
@@ -64,6 +65,69 @@ void UCharVec_free(UCharVec *vec) {
     free(vec->arr);
     vec->arr = NULL;
 }
+
+
+int U32Vec_init(U32Vec *vec) {
+    assert(vec);
+    vec->arr = calloc(INITIAL_CAPACITY, sizeof(uint32_t));
+    if (!vec->arr) return -1;
+    vec->cap = INITIAL_CAPACITY;
+    vec->size = 0;
+    return 0;
+}
+
+uint U32Vec_size(U32Vec *vec) {
+    assert(vec);
+    return vec->size;
+}
+
+void U32Vec_push(U32Vec *vec, uint32_t data) {
+    assert(vec);
+    if (vec->size == vec->cap) {
+        vec->arr = realloc(vec->arr, SCALING_FACTOR * vec->cap * sizeof(uint32_t));
+        if (!vec->arr) {
+            fprintf(stderr, "U32Vec_push: realloc failed\n");
+            exit(EXIT_FAILURE);
+        }
+
+        vec->cap *= SCALING_FACTOR;
+    }
+
+    vec->arr[vec->size++] = data;
+    
+}
+
+uint32_t U32Vec_get(U32Vec *vec, uint i) {
+    assert(vec);
+    if (i > vec->size) {
+        fprintf(stderr, "U32Vec_get: index out of bounds, i=%d\n", i);
+        exit(EXIT_FAILURE);
+    }
+
+    return vec->arr[i];
+}
+
+void U32Vec_from(U32Vec *vec, uint32_t *src, uint nmemb) {
+    assert(vec && src);
+    if (vec->cap < nmemb) {
+        vec->arr = realloc(vec->arr, nmemb * sizeof(uint32_t));
+        if (!vec->arr) {
+            fprintf(stderr, "U32Vec_from: reallov failed");
+            exit(EXIT_FAILURE);
+        }
+        vec->cap = nmemb;
+    }
+
+    memcpy(vec->arr, src, nmemb * sizeof(uint32_t));
+    vec->size = nmemb;
+}
+
+void U32Vec_free(U32Vec *vec) {
+    assert(vec);
+    free(vec->arr);
+    vec->arr = NULL;
+}
+
 
 // example usage
 int example(void) {

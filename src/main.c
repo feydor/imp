@@ -8,6 +8,7 @@
 #include <stdlib.h> /* for stroul, exit() */
 #include <stdint.h> /* for uint32_t */
 #include <stddef.h> /* for size_t */
+#include <string.h>
 #include <time.h>
 #include "main.h"
 #include "image.h"
@@ -55,10 +56,38 @@ static int write_bmp(char *dest, struct bmp_fheader *file_header, struct bmp_ihe
 
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
-static int handle_image(char *src, char *dest, char *flags) {
+// flags and palette are optional
+static int handle_image(char *src, char *dest, char *flags, char *palette) {
    if (!src || !dest) {
       errno = EINVAL;
       return -1;
+   }
+
+   FILE *palette_file = NULL;
+   U32Vec palette_buffer;
+   U32Vec_init(&palette_buffer);
+   if (palette) {
+      if (!(palette_file = fopen(palette, "r"))) {
+         return -1;
+      }
+      int MAX_CHARS = 1024;
+      char line[MAX_CHARS];
+      if (fgets(line, MAX_CHARS, palette_file)) {
+         char *tok;
+         strtok(line, ",");
+         while ((tok = strtok(NULL, ","))) {
+            char **invalid_input = NULL;
+            uint32_t n = strtoul(tok, invalid_input, 16);
+            if (invalid_input) {
+               fprintf(stderr, "invalid character in palette file\n");
+               return -1;
+            }
+            U32Vec_push(&palette_buffer, n);
+         }
+      }
+   } else {
+      uint32_t default_palette[] = {0xf8f9fa,0xe9ecef,0xdee2e6,0xced4da,0xadb5bd,0x6c757d,0x495057,0x343a40,0x212529};
+      U32Vec_from(&palette_buffer, default_palette, sizeof(default_palette) / sizeof(default_palette[0]));
    }
 
    printf("opening the source file: %s\n", src);
@@ -107,7 +136,8 @@ static int handle_image(char *src, char *dest, char *flags) {
          switch (flag) {
             case 'd':
                printf("performing ordered dithering...\n");
-               ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px);
+               ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px,
+                  palette_buffer.arr, U32Vec_size(&palette_buffer));
                break;
             case 'g':
                printf("performing grayscale...\n");
@@ -123,7 +153,8 @@ static int handle_image(char *src, char *dest, char *flags) {
                break;
             case 'p':
                printf("performing palette quantization...\n");
-               palette_quantization(raw_image.arr, UCharVec_size(&raw_image));
+               palette_quantization(raw_image.arr, UCharVec_size(&raw_image),
+                  palette_buffer.arr, U32Vec_size(&palette_buffer));
                break;
             default:
                printf("'%c' is not a valid flag\n", flag);
@@ -163,25 +194,24 @@ static int handle_image(char *src, char *dest, char *flags) {
    }
 
    fclose(fp);
+   U32Vec_free(&palette_buffer);
    UCharVec_free(&raw_image);
    UCharVec_free(&image_with_padding);
    return 0;
 }
 
 int main(int argc, char *argv[]) {
-
    srand(time(NULL));
    int opt;
    opterr = 0;
-   char *src = NULL;
-   char *dest = NULL;
-   char *flags = NULL;
+   char *src, *dest, *palette, *flags;
 
-   while ((opt = getopt(argc, argv, OPTSTR)) != EOF) {
+   while ((opt = getopt(argc, argv, OPTSTR)) != -1) {
       switch(opt) {
          case 'i': src = optarg; break;
          case 'o': dest = optarg; break;
          case 'f': flags = optarg; break;
+         case 'p': palette = optarg; break;
          case 'h':
          default: usage(basename(argv[0])); exit(0);
       }
@@ -192,7 +222,7 @@ int main(int argc, char *argv[]) {
       exit(0);
    }
 
-   if (handle_image(src, dest, flags) != 0) {
+   if (handle_image(src, dest, flags, palette) != 0) {
       perror(ERR_HANDLEIMAGE); // error message is chosen based on value of errno before this
       exit(EXIT_FAILURE);
    }
