@@ -11,10 +11,19 @@
 #define DEFAULT_PROGNAME "imp"
     
 #define OPTSTR "i:o:p:f:h"
-#define USAGE_FMT  "USAGE:\n    %s [-i input file] [-o output file] [-p palette file] [-f flags] [-h]\n\nFLAGS:\n\
+#define USAGE_FMT  "USAGE:\n    %s [input file] [-o output file] [-p palette file] [-f flags] [-h]\n\nFLAGS:\n\
     i               invert\n    g               grayscale\n    d               ordered dithering\n    n               uniform noise\n\
     p               palette quantization\n\n\
-ARGS:\n    [input file]    24bit bmp\n    [palette file]    csv file"
+ARGS:\n    [input file]    24bit bmp\n    [palette file]    csv file\n"
+
+static struct option long_options[] = {
+    {"help", no_argument, NULL, 'h'},
+    {"palette", required_argument, NULL, 'p'},
+    {"flags", required_argument, NULL, 'f'},
+    {"input", required_argument, NULL, 'i'},
+    {"output", required_argument, NULL, 'o'},
+    {NULL, 0, NULL, 0}
+};
 
 #define BFHEADER_SIZE 14
 #define BIHEADER_SIZE 40

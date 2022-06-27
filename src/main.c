@@ -202,22 +202,35 @@ static int handle_image(char *src, char *dest, char *flags, char *palette) {
 
 int main(int argc, char *argv[]) {
    srand(time(NULL));
-   int opt;
+   int opt = 0, option_index = 0;
    opterr = 0;
    char *src, *dest, *palette, *flags;
 
-   while ((opt = getopt(argc, argv, OPTSTR)) != -1) {
+   while ((opt = getopt_long(argc, argv, OPTSTR, long_options, &option_index)) != -1) {
       switch(opt) {
+         case 'h': usage(basename(argv[0])); exit(0);
+         case 'p': palette = optarg; break;
+         case 'f': flags = optarg; break;
          case 'i': src = optarg; break;
          case 'o': dest = optarg; break;
-         case 'f': flags = optarg; break;
-         case 'p': palette = optarg; break;
-         case 'h':
-         default: usage(basename(argv[0])); exit(0);
+         case '?':
+            fprintf(stderr, "Unknown option %c\n", optopt);
+            usage(basename(argv[0])); exit(0);
+         case ':':
+            fprintf(stderr, "Missing option for %c\n", optopt);
+            usage(basename(argv[0])); exit(0);
+         default:
+            fprintf(stderr, "getopt returned character code 0%o\n", opt);
+            exit(-1);
       }
    }
 
-   if (!src && !dest) {
+   // get non-option arguments, ie the filename
+   while (optind < argc) {
+      src = argv[optind++];
+   }
+
+   if (!src || !dest) {
       usage(basename(argv[0]));
       exit(0);
    }
