@@ -91,6 +91,63 @@ static int load_palette(U32Vec *buffer, const char *palette) {
    return 0;
 }
 
+static int load_image(UCharVec *image_buffer, struct bmp_fheader *bfheader, struct bmp_iheader *biheader, const char *src) {
+   printf("opening the source file: %s\n", src);
+   FILE *fp = NULL;
+   if (!(fp = fopen(src, "rb"))) {
+      fprintf(stderr, "Input file not found: '%s'\n", src);
+      return -1;
+   }
+
+   // read the headers
+   read_bmp_headers(fp, bfheader, biheader);
+   if (bfheader->ftype != BMP_MAGIC) {
+      fprintf(stderr, "Not a BMP file: '%s'\n", src);
+      return -1;
+   }
+   printf("image dimensions: %d x %d (w x h px)\n", biheader->width_px, biheader->height_px);
+   printf("image size: %d bytes\n", biheader->image_size_bytes);
+
+   // read the image data
+   uchar raw_image_data[biheader->image_size_bytes];
+   fseek(fp, bfheader->offset, SEEK_SET);
+   fread(raw_image_data, 1, biheader->image_size_bytes, fp);
+
+   // copy image data to buffer, strip the end of row padding
+   int total_bytes_x = biheader->image_size_bytes / biheader->height_px;
+   size_t padding = total_bytes_x - (biheader->width_px * 3);
+   for (size_t i = 0; i < biheader->image_size_bytes; i++) {
+      // skip last two n bytes of every row (padding)
+      if (i % total_bytes_x > total_bytes_x - padding - 1) continue;
+      UCharVec_push(image_buffer, raw_image_data[i]);
+   }
+
+   return 0;
+}
+
+static void imagebuf_to_outputbuf(UCharVec *image_buffer, uchar *output_buffer, unsigned size_bytes, unsigned width_bytes, unsigned padding_bytes) {
+   UCharVec image_with_padding;
+   UCharVec_init(&image_with_padding);
+
+   for (size_t i = 0; i < UCharVec_size(image_buffer); ++i) {
+      if (i != 0 && i % (width_bytes - padding_bytes) == 0) {
+         for (size_t n = 0; n < padding_bytes; ++n) {
+            UCharVec_push(&image_with_padding, 0x00);
+         }
+      } 
+      
+      UCharVec_push(&image_with_padding, UCharVec_get(image_buffer, i));
+   }
+
+   // add EOF padding bytes
+   for (size_t n = 0; n < padding_bytes; ++n) {
+      UCharVec_push(&image_with_padding, 0x00);
+   }
+
+   UCharVec_copyto(&image_with_padding, output_buffer, size_bytes);
+   UCharVec_free(&image_with_padding);
+}
+
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
 // flags and palette are optional
@@ -102,75 +159,42 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
 
    U32Vec palette_buffer;
    U32Vec_init(&palette_buffer);
-   if (load_palette(&palette_buffer, palette)) {
+   if (load_palette(&palette_buffer, palette) != 0) {
       return -1;
    }
-
-   printf("opening the source file: %s\n", src);
-   FILE *fp = NULL;
-   if (!(fp = fopen(src, "rb"))) {
-      fprintf(stderr, "Input file not found: '%s'\n", src);
-      return -1;
-   }
-   
-   // read headers
+   UCharVec image_buffer;
    struct bmp_fheader bfheader;
    struct bmp_iheader biheader;
-   read_bmp_headers(fp, &bfheader, &biheader);
-
-   // print header info
-   if (bfheader.ftype != BMP_MAGIC) {
-      fprintf(stderr, "Not a BMP file: '%s'\n", src);
+   UCharVec_init(&image_buffer);
+   if (load_image(&image_buffer, &bfheader, &biheader, src) != 0) {
       return -1;
    }
-   printf("image dimensions: %d x %d (w x h px)\n", biheader.width_px, biheader.height_px);
-   printf("image size: %d bytes\n", biheader.image_size_bytes);
 
-   // read the image bytes
-   uchar image_buffer[biheader.image_size_bytes];
-   fseek(fp, bfheader.offset, SEEK_SET);
-   fread(image_buffer, 1, biheader.image_size_bytes, fp);
-   
-   // copy to vector, strip padding
-   UCharVec raw_image;
-   if (UCharVec_init(&raw_image) != 0) {
-      perror("UCharVec_init failed");
-      exit(EXIT_FAILURE);
-   }
-
-   int total_bytes_x = biheader.image_size_bytes / biheader.height_px;
-   size_t padding = total_bytes_x - (biheader.width_px * 3);
-   for (size_t i = 0; i < biheader.image_size_bytes; i++) {
-      // skip last two n bytes of every row (padding)
-      if (i % total_bytes_x > total_bytes_x - padding - 1) continue;
-      UCharVec_push(&raw_image, image_buffer[i]);
-   }
-
-   // manipulate vector
+   // manipulate buffer
    if (flags) {
       for (size_t i = 0; i < strlen(flags); ++i) {
          char flag = flags[i];
          switch (flag) {
             case 'd':
                printf("performing ordered dithering...\n");
-               ordered_dithering(raw_image.arr, UCharVec_size(&raw_image), biheader.width_px,
+               ordered_dithering(image_buffer.arr, UCharVec_size(&image_buffer), biheader.width_px,
                   palette_buffer.arr, U32Vec_size(&palette_buffer));
                break;
             case 'g':
                printf("performing grayscale...\n");
-               grayscale(raw_image.arr, UCharVec_size(&raw_image));
+               grayscale(image_buffer.arr, UCharVec_size(&image_buffer));
                break;
             case 'i':
                printf("performing invert...\n");
-               invert(raw_image.arr, UCharVec_size(&raw_image));
+               invert(image_buffer.arr, UCharVec_size(&image_buffer));
                break;
             case 'n':
                printf("applying uniform noise...\n");
-               add_uniform_bernoulli_noise(raw_image.arr, UCharVec_size(&raw_image));
+               add_uniform_bernoulli_noise(image_buffer.arr, UCharVec_size(&image_buffer));
                break;
             case 'p':
                printf("performing palette quantization...\n");
-               palette_quantization(raw_image.arr, UCharVec_size(&raw_image),
+               palette_quantization(image_buffer.arr, UCharVec_size(&image_buffer),
                   palette_buffer.arr, U32Vec_size(&palette_buffer));
                break;
             default:
@@ -180,40 +204,19 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
       }
    }
 
-   // back to buffer, add padding
-   UCharVec image_with_padding;
-   if (UCharVec_init(&image_with_padding) != 0) {
-      perror("UCharVec_init failed");
-      exit(EXIT_FAILURE);
-   }
-
-   for (size_t i = 0; i < UCharVec_size(&raw_image); ++i) {
-      // every xth byte, add back in padding
-      if (i != 0 && i % (total_bytes_x - padding) == 0) {
-         for (size_t n = 0; n < padding; ++n) {
-            UCharVec_push(&image_with_padding, 0x00);
-         }
-      } 
-      
-      UCharVec_push(&image_with_padding, UCharVec_get(&raw_image, i));
-   }
-
-   // add EOF padding bytes
-   for (size_t n = 0; n < padding; ++n) {
-      UCharVec_push(&image_with_padding, 0x00);
-   }
-
-   UCharVec_copyto(&image_with_padding, image_buffer, biheader.image_size_bytes);
-
+   // back to output buffer, restore padding
+   uchar output_buffer[biheader.image_size_bytes];
+   int width_bytes = biheader.image_size_bytes / biheader.height_px;
+   int padding_bytes = width_bytes - (biheader.width_px * 3);
+   imagebuf_to_outputbuf(&image_buffer, output_buffer, biheader.image_size_bytes, width_bytes, padding_bytes);
+   
    // open the output file and write the headers followed by the image data
-   if (write_bmp(dest, &bfheader, &biheader, image_buffer) != 0) {
+   if (write_bmp(dest, &bfheader, &biheader, output_buffer) != 0) {
       return -1;
    }
 
-   fclose(fp);
    U32Vec_free(&palette_buffer);
-   UCharVec_free(&raw_image);
-   UCharVec_free(&image_with_padding);
+   UCharVec_free(&image_buffer);
    return 0;
 }
 
