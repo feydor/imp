@@ -126,7 +126,7 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
          switch (flag) {
             case 'd':
                printf("performing ordered dithering...\n");
-               ordered_dithering(image_buffer.arr, UCharVec_size(&image_buffer), bmp_file.width_px,
+               ordered_dithering_single_channel(image_buffer.arr, UCharVec_size(&image_buffer), bmp_file.width_px,
                   palette_buffer.arr, U32Vec_size(&palette_buffer));
                break;
             case 'g':

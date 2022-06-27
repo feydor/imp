@@ -73,41 +73,74 @@ void two_tone(uchar *buf, size_t bytes, uint32_t tone1, uint32_t tone2) {
       double dist2 = distance_rgb(tone2, pixel);
 
       if (dist1 > dist2) {
-         buf[px + 2] = (tone1 & 0xFF0000) >> 16;
-         buf[px + 1] = (tone1 & 0x00FF00) >> 8;;
-         buf[px] = tone1 & 0x0000FF;
+         buf[px + 2] = rgb_red(tone1);
+         buf[px + 1] = rgb_green(tone1);
+         buf[px] = rgb_blue(tone1);
       } else {
-         buf[px + 2] = (tone2 & 0xFF0000) >> 16;
-         buf[px + 1] = (tone2 & 0x00FF00) >> 8;;
-         buf[px] = tone2 & 0x0000FF;
+         buf[px + 2] = rgb_red(tone2);
+         buf[px + 1] = rgb_green(tone2);
+         buf[px] = rgb_blue(tone2);
       }
    }
 }
 
+// compare the RGb components of both colors
 static void nearest_palette_color(uint32_t *palette, size_t palette_size, uchar *red, uchar *green, uchar* blue) {
     assert(red && green && blue && palette);
 
     // find the color in the palette that is 'closest' to the input
     // use euclidean RGB distances to determine closeness
-    uchar r = 0, g = 0, b = 0;
     int32_t closest_color = 0;
     double distance = 0.0, min = DBL_MAX;
     for (size_t i = 0; i < palette_size; ++i) {
-        r = (palette[i] & 0xFF0000) >> 16;
-        g = (palette[i] & 0x00FF00) >> 8;
-        b = palette[i] & 0x0000FF;
-        distance = sqrt( pow(abs(b - *blue), 2) +
-                         pow(abs(g - *green), 2) +
-                         pow(abs(r - *red), 2) );
+        distance = sqrt( pow(abs((int)rgb_blue(palette[i]) - *blue), 2) +
+                         pow(abs((int)rgb_green(palette[i]) - *green), 2) +
+                         pow(abs((int)rgb_red(palette[i]) - *red), 2) );
 
         if (distance < min) {
             min = distance;
             closest_color = palette[i];
         }
     }
-    *red = (closest_color & 0xFF0000) >> 16;
-    *green = (closest_color & 0x00FF00) >> 8;
-    *blue = closest_color & 0x0000FF;
+    *red = rgb_red(closest_color);
+    *green = rgb_green(closest_color);
+    *blue = rgb_blue(closest_color);
+}
+
+void ordered_dithering_triple_channel(uchar *buf, size_t size_bytes, size_t width_pixels, uint32_t *palette, size_t palette_size) {
+   int matrix_dim = 4;
+   float bayer_matrix[4][4] = {
+      { 0.0f, 8.0f, 2.0f, 10.0f },
+      { 12.0f, 4.0f, 14.0f, 6.0f },
+      { 3.0f, 11.0f, 1.0f, 9.0f },
+      { 15.0f, 7.0f, 13.0f, 5.0f }
+   };
+   // BMP supports 2^16 colors
+   int N = 4;
+   float spread = 256.0f/N;
+   // precompute threshold maps and normalize
+   for (int r = 0; r < matrix_dim; ++r) {
+      for (int c = 0; c < matrix_dim; ++c) {
+         bayer_matrix[r][c] = (bayer_matrix[r][c] / 16.0f) - 0.5f;
+      }
+   }
+
+   int pixel_count = 0;
+   size_t adjusted_end = size_bytes - (size_bytes % 3);
+   for (size_t px = 0; px < adjusted_end; px += 3, ++pixel_count) {
+      int x = pixel_count % width_pixels;
+      int y = pixel_count / width_pixels;
+      
+      uchar new_red = buf[px+2] + spread * bayer_matrix[y % matrix_dim][x % matrix_dim];
+      uchar new_green = buf[px+1] + spread * bayer_matrix[y % matrix_dim][x % matrix_dim];
+      uchar new_blue = buf[px] + spread * bayer_matrix[y % matrix_dim][x % matrix_dim];
+      
+      nearest_palette_color(palette, palette_size, &new_red, &new_green, &new_blue);
+
+      buf[px + 2] = new_red;
+      buf[px + 1] = new_green;
+      buf[px] = new_blue;
+   }
 }
 
 /**
@@ -118,7 +151,7 @@ static void nearest_palette_color(uint32_t *palette, size_t palette_size, uchar 
  * M = threshold map
  * (1/2 is the normalizing term)
  */
-void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels, uint32_t *palette, size_t palette_size) {
+void ordered_dithering_single_channel(uchar *buf, size_t size_bytes, size_t width_pixels, uint32_t *palette, size_t palette_size) {
     // From wikipedia article on ordered dithering: https://en.wikipedia.org/wiki/Ordered_dithering
     int matrix_dim = 4;
     float bayer_matrix[4][4] = {
@@ -129,7 +162,7 @@ void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels, uint3
     };
     // BMP supports 2^16 colors
     int N = 4;
-    int spread = 256/N;
+    float spread = 256/N;
 
     // precompute threshold maps and normalize
     for (int r = 0; r < matrix_dim; ++r) {
@@ -146,11 +179,11 @@ void ordered_dithering(uchar *buf, size_t size_bytes, size_t width_pixels, uint3
         
         unsigned int color = 0, new_color = 0;
         color = (buf[px + 2] << 16) | (buf[px + 1] << 8) | buf[px]; // temp conversion to rgb
-        new_color = color + spread * (bayer_matrix[y % matrix_dim][x % matrix_dim]);
+        new_color = color + spread * bayer_matrix[y % matrix_dim][x % matrix_dim];
         
-        uchar new_red = (new_color & 0xFF0000) >> 16;
-        uchar new_green = (new_color & 0x00FF00) >> 8;
-        uchar new_blue = new_color & 0x0000FF;
+        uchar new_red = rgb_red(new_color);
+        uchar new_green = rgb_green(new_color);
+        uchar new_blue = rgb_blue(new_color);
         nearest_palette_color(palette, palette_size, &new_red, &new_green, &new_blue);
         buf[px + 2] = new_red;
         buf[px + 1] = new_green;
