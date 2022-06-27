@@ -55,17 +55,10 @@ static int write_bmp(const char *dest, struct bmp_fheader *file_header, struct b
    return 0;
 }
 
-// Assumes Little-endian, 24bit bmp
-// bmp data is stored starting at bottom-left corner
-// flags and palette are optional
-static int handle_image(const char *src, const char *dest, const char *flags, const char *palette) {
-   if (!src || !dest) {
-      errno = EINVAL;
-      return -1;
-   }
-
-   U32Vec palette_buffer;
-   U32Vec_init(&palette_buffer);
+/**
+ * @brief loads the <palette>, if not found loads a default
+ */
+static int load_palette(U32Vec *buffer, const char *palette) {
    if (palette) {
       FILE *palette_fp = NULL;
       if (!(palette_fp = fopen(palette, "r"))) {
@@ -80,14 +73,37 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
          tok = strtok(line, ",");
          while (tok && isalnum(*tok)) {
             uint32_t n = strtoul(tok, NULL, 16);
-            U32Vec_push(&palette_buffer, n);
+            U32Vec_push(buffer, n);
             tok = strtok(NULL, ",");
          }
       }
       fclose(palette_fp);
    } else {
-      uint32_t default_palette[] = {0xf8f9fa,0xe9ecef,0xdee2e6,0xced4da,0xadb5bd,0x6c757d,0x495057,0x343a40,0x212529};
-      U32Vec_from(&palette_buffer, default_palette, sizeof(default_palette) / sizeof(default_palette[0]));
+      uint32_t default_palette[] = {
+         0x800000,0x9A6324,0x808000,0x469990,0x000075,
+         0x000000,0xe6194B,0xf58231,0xffe119,0xbfef45,
+         0x3cb44b,0x42d4f4,0x4363d8,0x911eb4,0xf032e6,
+         0xa9a9a9,0xfabed4,0xffd8b1,0xfffac8,0xaaffc3,
+         0xdcbeff,0xffffff
+      };
+      U32Vec_from(buffer, default_palette, sizeof(default_palette) / sizeof(default_palette[0]));
+   }
+   return 0;
+}
+
+// Assumes Little-endian, 24bit bmp
+// bmp data is stored starting at bottom-left corner
+// flags and palette are optional
+static int handle_image(const char *src, const char *dest, const char *flags, const char *palette) {
+   if (!src || !dest) {
+      errno = EINVAL;
+      return -1;
+   }
+
+   U32Vec palette_buffer;
+   U32Vec_init(&palette_buffer);
+   if (load_palette(&palette_buffer, palette)) {
+      return -1;
    }
 
    printf("opening the source file: %s\n", src);

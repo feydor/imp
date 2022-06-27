@@ -32,6 +32,12 @@ static int rgb_to_gray(uchar r, uchar g, uchar b) {
    return (int) (0.2989 * r + 0.5870 * g + 0.1140 * b);
 }
 
+static double distance_rgb(int32_t tone1, int32_t tone2) {
+   return sqrt( pow(abs(rgb_red(tone1) - rgb_red(tone2)), 2) +
+                pow(abs(rgb_green(tone1) - rgb_green(tone2)), 2) +
+                pow(abs(rgb_blue(tone1) - rgb_blue(tone2)), 2) );
+}
+
 void invert(uchar *buf, size_t size) {
    for (size_t i = 0; i < size; ++i)
       buf[i] = 255 - buf[i];
@@ -58,19 +64,13 @@ void grayscale(uchar *buf, size_t size_bytes) {
    }
 }
 
-int distance_rgb(int32_t tone1, int32_t tone2) {
-   return sqrt( pow(abs(rgb_red(tone1) - rgb_red(tone2)), 2) +
-                pow(abs(rgb_green(tone1) - rgb_green(tone2)), 2) +
-                pow(abs(rgb_blue(tone1) - rgb_blue(tone2)), 2) );
-}
-
 void two_tone(uchar *buf, size_t bytes, uint32_t tone1, uint32_t tone2) {
    size_t adjusted_end = bytes - (bytes % 3);
    for (size_t px = 0; px < adjusted_end; px += 3) {
       uint32_t pixel = 0;
       pixel = (buf[px + 2] << 16) | (buf[px + 1] << 8) | buf[px];
-      int dist1 = distance_rgb(tone1, pixel);
-      int dist2 = distance_rgb(tone2, pixel);
+      double dist1 = distance_rgb(tone1, pixel);
+      double dist2 = distance_rgb(tone2, pixel);
 
       if (dist1 > dist2) {
          buf[px + 2] = (tone1 & 0xFF0000) >> 16;
