@@ -121,6 +121,25 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
       UCharVec_push(&image_buffer, bmp_file.raw_image[i]);
    }
 
+   
+   // reverse the byte array (first pixel becomes last pixel, second becomes second-to-last, etc)
+   // reversed_bmp_buffer is only used for rendering purposes
+   uchar reversed_bmp_buffer[bmp_file.image_size_bytes];
+   size_t buf_size = UCharVec_size(&image_buffer);
+   for (size_t i = 0; i < buf_size; ++i) {
+      reversed_bmp_buffer[i] = UCharVec_get(&image_buffer, buf_size - 1 - i);
+   }
+
+   // then do row-wise swap
+   for (size_t row = 0; row < bmp_file.height_px; ++row) {
+      size_t bytes_per_row = 3 * bmp_file.width_px;
+      uchar row_buf[bytes_per_row];
+      for (size_t i = 0; i < bytes_per_row; ++i) {
+         size_t end_of_row = ((row + 1) * bytes_per_row) - 1;
+         row_buf[i] = reversed_bmp_buffer[end_of_row - i];
+      }
+      memcpy(reversed_bmp_buffer + (row * bytes_per_row), row_buf, bytes_per_row);
+   }
 
       // write buffer to screen
    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
@@ -137,7 +156,7 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
 
    int depth = 24;
    int pitch =  3 * bmp_file.width_px;
-   SDL_Surface *image_surface = SDL_CreateRGBSurfaceFrom(image_buffer.arr,
+   SDL_Surface *image_surface = SDL_CreateRGBSurfaceFrom(reversed_bmp_buffer,
       bmp_file.width_px,
       bmp_file.height_px,
       depth,
@@ -168,7 +187,8 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
       }
 
       SDL_RenderClear(renderer);
-      SDL_RenderCopy(renderer, image_texture, NULL, NULL);
+      SDL_RenderCopy(renderer, image_texture,
+                     NULL, &(SDL_Rect){ 0, 0, bmp_file.width_px, bmp_file.height_px });
       SDL_RenderPresent(renderer);
 
       SDL_Delay(1000 / 60);
