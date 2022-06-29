@@ -16,6 +16,8 @@
 #include "vector.h"
 #include "bmp.h"
 
+#include <SDL2/SDL.h>
+
 extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
@@ -118,6 +120,43 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
       if (i % width_bytes > width_bytes - padding - 1) continue;
       UCharVec_push(&image_buffer, bmp_file.raw_image[i]);
    }
+
+
+      // write buffer to screen
+   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
+	   exit(fprintf(stderr, "SDL could not be initialized.\nSDL error: %s\n", SDL_GetError()));
+   }
+
+   SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+      600, 600, SDL_WINDOW_SHOWN);
+   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
+      SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+   if (!renderer) {
+      exit(fprintf(stderr, "Could not create SDL renderer\n"));
+   }
+
+   SDL_RenderClear(renderer);
+
+   int bitspp = 3 * sizeof(uchar);
+   int pitch =  bmp_file.width_px * bitspp;
+   SDL_Surface *image_surface = SDL_CreateRGBSurfaceFrom(image_buffer.arr,
+      bmp_file.width_px,
+      bmp_file.height_px,
+      3 * sizeof(uchar),
+      pitch,
+      0x00FF0000,
+      0x0000FF00,
+      0x000000FF,
+      0);
+   
+   SDL_Texture *image_texture = SDL_CreateTextureFromSurface(renderer, image_surface);
+   SDL_RenderCopy(renderer, image_texture, NULL,
+      &(SDL_Rect){0, 0, 600, 600});
+
+   SDL_FreeSurface(image_surface);
+   SDL_DestroyRenderer(renderer);
+   SDL_DestroyWindow(window);
+   SDL_Quit();
 
    // manipulate buffer
    if (flags) {
