@@ -128,35 +128,51 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
    }
 
    SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-      600, 600, SDL_WINDOW_SHOWN);
+      bmp_file.width_px, bmp_file.height_px, SDL_WINDOW_SHOWN);
    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
       SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
    if (!renderer) {
       exit(fprintf(stderr, "Could not create SDL renderer\n"));
    }
 
-   SDL_RenderClear(renderer);
-
-   int bitspp = 3 * sizeof(uchar);
-   int pitch =  bmp_file.width_px * bitspp;
+   int depth = 24;
+   int pitch =  3 * bmp_file.width_px;
    SDL_Surface *image_surface = SDL_CreateRGBSurfaceFrom(image_buffer.arr,
       bmp_file.width_px,
       bmp_file.height_px,
-      3 * sizeof(uchar),
+      depth,
       pitch,
-      0x00FF0000,
-      0x0000FF00,
-      0x000000FF,
+      0x0000FF,
+      0x00FF00,
+      0xFF0000,
       0);
    
    SDL_Texture *image_texture = SDL_CreateTextureFromSurface(renderer, image_surface);
-   SDL_RenderCopy(renderer, image_texture, NULL,
-      &(SDL_Rect){0, 0, 600, 600});
+   SDL_Event event;
+   
+   while (1) {
+      while (SDL_PollEvent(&event)) {
+         switch (event.type) {
+            case SDL_KEYDOWN: {
+               switch (event.key.keysym.sym) {
+                  case SDLK_ESCAPE: {
+                     SDL_FreeSurface(image_surface);
+                     SDL_DestroyRenderer(renderer);
+                     SDL_DestroyWindow(window);
+                     SDL_Quit();
+                     exit(0);
+                  } break;
+               }
+            }
+         }
+      }
 
-   SDL_FreeSurface(image_surface);
-   SDL_DestroyRenderer(renderer);
-   SDL_DestroyWindow(window);
-   SDL_Quit();
+      SDL_RenderClear(renderer);
+      SDL_RenderCopy(renderer, image_texture, NULL, NULL);
+      SDL_RenderPresent(renderer);
+
+      SDL_Delay(1000 / 60);
+   }
 
    // manipulate buffer
    if (flags) {
