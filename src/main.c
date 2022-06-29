@@ -15,11 +15,17 @@
 #include <time.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#define WINDOW_WIDTH 832
+#define WINDOW_HEIGHT 640
 #define UI_MARGIN_TOP 16
 #define UI_MARGIN_RIGHT 16
 #define UI_MARGIN_BOTTOM 64
 #define UI_MARGIN_LEFT 64
-#define clicked_button_00(x, y, image_height) ( x < 64 && y > UI_MARGIN_TOP + image_height )
+// TODO: make resources NOT relative to executable
+#define BUTTON00_PATH "../res/icons/button0.bmp"
+#define BUTTON_SIZE 64
+#define clicked_button_00(x, y, image_height) ( x < BUTTON_SIZE && y > UI_MARGIN_TOP + image_height )
 SDL_Window *window;
 SDL_Renderer *renderer;
 SDL_Surface *image_surface;
@@ -170,8 +176,8 @@ static int handle_image(const char *src, const char *dest, const char *flags,
 
     window = SDL_CreateWindow(
         "imp", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        bmp_file.width_px + UI_MARGIN_LEFT + UI_MARGIN_RIGHT,
-        bmp_file.height_px + UI_MARGIN_BOTTOM + UI_MARGIN_TOP,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
         SDL_WINDOW_SHOWN);
 
     renderer = SDL_CreateRenderer(
@@ -185,11 +191,26 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     image_surface = SDL_CreateRGBSurfaceFrom(
         reversed_bmp_buffer, bmp_file.width_px, bmp_file.height_px, depth,
         pitch, 0x0000FF, 0x00FF00, 0xFF0000, 0);
-
     image_texture =
         SDL_CreateTextureFromSurface(renderer, image_surface);
     SDL_Event event;
-    if (!atexit(cleanup_sdl)) {
+    
+    // create ui/buttons surfaces
+    // TODO: free these surfaces at clean up
+    int NUM_BUTTONS = 3;
+    SDL_Surface *ui_button_surfaces[NUM_BUTTONS];
+    for (int i = 0; i < NUM_BUTTONS; ++i) {
+      ui_button_surfaces[i] = malloc(sizeof(SDL_Surface));
+      if (!ui_button_surfaces[i]) {
+         fprintf(stderr, "malloc failed to allocate SDL_Surfaces\n");
+      }
+
+      // char filename[255];
+      // sprintf(filename, "../res/icons/button0.bmp", i);
+      ui_button_surfaces[i] = SDL_LoadBMP(BUTTON00_PATH);
+    }
+
+    if (atexit(cleanup_sdl) != 0) {
       fprintf(stderr, "atexit failed to register cleanup_sdl\n");
     }
 
@@ -230,15 +251,24 @@ static int handle_image(const char *src, const char *dest, const char *flags,
         }
 
         SDL_RenderClear(renderer);
+        SDL_SetRenderDrawColor(renderer, 0x01, 0x01, 0x01, 0);
+        SDL_RenderFillRect(renderer, &(SDL_Rect){ UI_MARGIN_LEFT,
+                                                  0,
+                                                  WINDOW_WIDTH - UI_MARGIN_LEFT,
+                                                  WINDOW_HEIGHT - UI_MARGIN_BOTTOM });
+        SDL_SetRenderDrawColor(renderer, 0xF7, 0xF7, 0XF7, 0);
         SDL_RenderCopy(renderer, image_texture, NULL,
                        &(SDL_Rect){UI_MARGIN_LEFT, UI_MARGIN_TOP,
                                    bmp_file.width_px, bmp_file.height_px});
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0, 0);
-        SDL_RenderFillRect(
-            renderer,
-            &(SDL_Rect){0, bmp_file.height_px + UI_MARGIN_TOP, 64, 64});
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-
+        
+        for (int i = 0, x_offset = 0; i < NUM_BUTTONS; ++i, x_offset += BUTTON_SIZE) {
+            SDL_Texture *button = SDL_CreateTextureFromSurface(renderer, ui_button_surfaces[i]);
+            SDL_RenderCopy(renderer, button, NULL, &(SDL_Rect){x_offset,
+                                                               WINDOW_HEIGHT - BUTTON_SIZE,
+                                                               BUTTON_SIZE,
+                                                               BUTTON_SIZE});
+        }
+        
         SDL_RenderPresent(renderer);
         SDL_Delay(1000 / 60);
     }
