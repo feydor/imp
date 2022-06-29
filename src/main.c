@@ -6,9 +6,7 @@
 #include <assert.h> /* for assert() */
 #include <ctype.h>  /* for isdigit() */
 #include <errno.h>  /* for external errno variable */
-#include <getopt.h> /* for external optarg, opterr, optind, getopt() */
 #include <libgen.h> /* for basename() */
-#include <stddef.h> /* for size_t */
 #include <stdint.h> /* for uint32_t */
 #include <stdio.h>  /* for FILE, fprint, fread, stdin, stdout, stderr */
 #include <stdlib.h> /* for stroul, exit() */
@@ -21,16 +19,21 @@
 #define UI_MARGIN_RIGHT 16
 #define UI_MARGIN_BOTTOM 64
 #define UI_MARGIN_LEFT 64
+#define clicked_button_00(x, y, image_height) ( x < 64 && y > UI_MARGIN_TOP + image_height )
 SDL_Window *window;
 SDL_Renderer *renderer;
+SDL_Surface *image_surface;
+SDL_Texture *image_texture;
 
 extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
 
+
 static void usage(const char *progname) {
     fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
 }
+
 
 /**
  * @brief loads the <palette>, if not found loads a default
@@ -67,6 +70,7 @@ static int load_palette(U32Vec *buffer, const char *palette) {
     return 0;
 }
 
+
 static void imagebuf_to_outputbuf(UCharVec *image_buffer, uchar *output_buffer,
                                   unsigned size_bytes, unsigned width_bytes,
                                   unsigned padding_bytes) {
@@ -91,6 +95,17 @@ static void imagebuf_to_outputbuf(UCharVec *image_buffer, uchar *output_buffer,
     UCharVec_copyto(&image_with_padding, output_buffer, size_bytes);
     UCharVec_free(&image_with_padding);
 }
+
+
+void cleanup_sdl() {
+   printf("cleaning up after SDL\n");
+   SDL_DestroyTexture(image_texture);
+   SDL_FreeSurface(image_surface);
+   SDL_DestroyRenderer(renderer);
+   SDL_DestroyWindow(window);
+   SDL_Quit();
+}
+
 
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
@@ -167,13 +182,16 @@ static int handle_image(const char *src, const char *dest, const char *flags,
 
     int depth = 24;
     int pitch = 3 * bmp_file.width_px;
-    SDL_Surface *image_surface = SDL_CreateRGBSurfaceFrom(
+    image_surface = SDL_CreateRGBSurfaceFrom(
         reversed_bmp_buffer, bmp_file.width_px, bmp_file.height_px, depth,
         pitch, 0x0000FF, 0x00FF00, 0xFF0000, 0);
 
-    SDL_Texture *image_texture =
+    image_texture =
         SDL_CreateTextureFromSurface(renderer, image_surface);
     SDL_Event event;
+    if (!atexit(cleanup_sdl)) {
+      fprintf(stderr, "atexit failed to register cleanup_sdl\n");
+    }
 
     while (1) {
         while (SDL_PollEvent(&event)) {
@@ -181,10 +199,6 @@ static int handle_image(const char *src, const char *dest, const char *flags,
             case SDL_KEYDOWN: {
                 switch (event.key.keysym.sym) {
                 case SDLK_ESCAPE: {
-                    SDL_FreeSurface(image_surface);
-                    SDL_DestroyRenderer(renderer);
-                    SDL_DestroyWindow(window);
-                    SDL_Quit();
                     exit(0);
                 } break;
                 }
@@ -194,9 +208,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
                 switch (event.button.button) {
                 case (SDL_BUTTON_LEFT): {
                     // if mouse click on bottom left red rectangle
-                    if (event.button.x < 64 &&
-                        (u_int)event.button.y >
-                            UI_MARGIN_TOP + bmp_file.height_px) {
+                    if (clicked_button_00((u_int)event.button.x, (u_int)event.button.y, bmp_file.height_px)) {
                         printf("performing invert...\n");
                         invert(reversed_bmp_buffer,
                                UCharVec_size(&image_buffer));
@@ -210,6 +222,10 @@ static int handle_image(const char *src, const char *dest, const char *flags,
                 } break;
                 }
             } break;
+
+            case SDL_QUIT: {
+               exit(0);
+            } break;
             }
         }
 
@@ -217,14 +233,13 @@ static int handle_image(const char *src, const char *dest, const char *flags,
         SDL_RenderCopy(renderer, image_texture, NULL,
                        &(SDL_Rect){UI_MARGIN_LEFT, UI_MARGIN_TOP,
                                    bmp_file.width_px, bmp_file.height_px});
-
         SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0, 0);
         SDL_RenderFillRect(
             renderer,
             &(SDL_Rect){0, bmp_file.height_px + UI_MARGIN_TOP, 64, 64});
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-        SDL_RenderPresent(renderer);
 
+        SDL_RenderPresent(renderer);
         SDL_Delay(1000 / 60);
     }
 
@@ -280,6 +295,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     free(bmp_file.raw_image);
     return 0;
 }
+
 
 int main(int argc, char *argv[]) {
     srand(time(NULL));

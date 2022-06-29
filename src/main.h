@@ -1,6 +1,8 @@
 /* main.h - the program's UNIX interface*/
 #ifndef MAIN_H
 #define MAIN_H
+#include <stddef.h>
+#include <getopt.h> /* for external optarg, opterr, optind, getopt() */
 
 #define ERR_FOPEN_INPUT  "fopen(input, r)"
 #define ERR_FOPEN_OUTPUT "fopen(output, w)"
