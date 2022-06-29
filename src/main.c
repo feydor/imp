@@ -17,6 +17,10 @@
 #include "bmp.h"
 
 #include <SDL2/SDL.h>
+#define UI_MARGIN_TOP 16
+#define UI_MARGIN_RIGHT 16
+#define UI_MARGIN_BOTTOM 64
+#define UI_MARGIN_LEFT 64
 
 extern int errno;
 extern char *optarg; /* for use with getopt() */
@@ -141,13 +145,18 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
       memcpy(reversed_bmp_buffer + (row * bytes_per_row), row_buf, bytes_per_row);
    }
 
-      // write buffer to screen
+   // write buffer to screen
    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
 	   exit(fprintf(stderr, "SDL could not be initialized.\nSDL error: %s\n", SDL_GetError()));
    }
 
-   SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-      bmp_file.width_px, bmp_file.height_px, SDL_WINDOW_SHOWN);
+   SDL_Window *window = SDL_CreateWindow("imp",
+                                         SDL_WINDOWPOS_UNDEFINED,
+                                         SDL_WINDOWPOS_UNDEFINED,
+                                         bmp_file.width_px + UI_MARGIN_LEFT + UI_MARGIN_RIGHT,
+                                         bmp_file.height_px + UI_MARGIN_BOTTOM + UI_MARGIN_TOP,
+                                         SDL_WINDOW_SHOWN);
+
    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
       SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
    if (!renderer) {
@@ -182,13 +191,41 @@ static int handle_image(const char *src, const char *dest, const char *flags, co
                      exit(0);
                   } break;
                }
-            }
+            } break;
+
+            case SDL_MOUSEBUTTONDOWN: {
+               switch (event.button.button) {
+                  case (SDL_BUTTON_LEFT): {
+                     // if mouse click on bottom left red rectangle
+                     if (event.button.x < 64 && (u_int)event.button.y > UI_MARGIN_TOP + bmp_file.height_px) {
+                        printf("performing invert...\n");
+                        invert(reversed_bmp_buffer, UCharVec_size(&image_buffer));
+                        image_surface = SDL_CreateRGBSurfaceFrom(reversed_bmp_buffer,
+                                          bmp_file.width_px,
+                                          bmp_file.height_px,
+                                          depth,
+                                          pitch,
+                                          0x0000FF,
+                                          0x00FF00,
+                                          0xFF0000,
+                                          0);
+                        image_texture = SDL_CreateTextureFromSurface(renderer, image_surface);
+                     }
+                  } break;
+               }
+            } break;
          }
       }
 
       SDL_RenderClear(renderer);
-      SDL_RenderCopy(renderer, image_texture,
-                     NULL, &(SDL_Rect){ 0, 0, bmp_file.width_px, bmp_file.height_px });
+      SDL_RenderCopy(renderer,
+                     image_texture,
+                     NULL,
+                     &(SDL_Rect){ UI_MARGIN_LEFT, UI_MARGIN_TOP, bmp_file.width_px, bmp_file.height_px });
+
+      SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0, 0);
+      SDL_RenderFillRect(renderer, &(SDL_Rect){ 0, bmp_file.height_px + UI_MARGIN_TOP, 64, 64 });
+      SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
       SDL_RenderPresent(renderer);
 
       SDL_Delay(1000 / 60);
