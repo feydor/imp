@@ -48,16 +48,17 @@ typedef struct {
     BMP_file_header *file_header;
     BMP_info_header *info_header;
     uchar *image_raw;               // image without end of row padding
-    uchar *image_render;            // image as accepted by SDL
     unsigned w;
     unsigned h;
-    unsigned nbytes;
+    unsigned size_with_padding;
+    unsigned size_bytes;            // size without padding
 } BMP_file;
 
 /** all BMP_* functions set the global bmp_err variable on error and then return -1*/
 int BMP_load(BMP_file *bmp, const char *src);
 int BMP_write(BMP_file *file, const char *dest);
 void BMP_print_dimensions(BMP_file *bmp);
+void BMP_set_pixel(BMP_file *bmp, unsigned x, unsigned y, uint32_t rgb);
 void BMP_reverse(uchar *dest, uchar *src, size_t height, size_t width_bytes, size_t nbytes);
 void BMP_free(BMP_file *bmp);
 

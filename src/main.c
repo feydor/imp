@@ -45,6 +45,12 @@ typedef struct {
     int y;
 } Point;
 
+typedef enum {
+    IMP_CURSOR,
+    IMP_PENCIL,
+} ImpMouseMode;
+ImpMouseMode imp_mousemode = IMP_PENCIL;
+
 extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
@@ -111,11 +117,22 @@ void update_global_image_render(uchar *buffer, size_t width_px,
                                 size_t height_px) {
     int depth = 24;
     int pitch = 3 * width_px;
+    uint32_t rmask, gmask, bmask;
+    #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+        rmask = 0x0000FF;
+        gmask = 0x00FF00;
+        bmask = 0xFF0000;
+    #else // little endian
+        rmask = 0xFF0000;
+        gmask = 0x00FF00;
+        bmask = 0x0000FF;
+    #endif
     image_surface =
         SDL_CreateRGBSurfaceFrom(buffer, width_px, height_px, depth, pitch,
-                                 0x0000FF, 0x00FF00, 0xFF0000, 0);
+                                 rmask, gmask, bmask, 0);
     image_texture = SDL_CreateTextureFromSurface(renderer, image_surface);
 }
+
 
 void create_button_bars() {
     for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
@@ -149,28 +166,28 @@ void clicked_button_dispatch(ImpButtonTask task, BMP_file *bmp,
     } break;
     case IMP_INVERT: {
         printf("performing invert...\n");
-        invert(bmp->image_raw, bmp->nbytes);
+        invert(bmp->image_raw, bmp->size_bytes);
         break;
     } break;
 
     case IMP_GRAYSCALE: {
         printf("performing grayscale...\n");
-        grayscale(bmp->image_raw, bmp->nbytes);
+        grayscale(bmp->image_raw, bmp->size_bytes);
     } break;
 
     case IMP_UNIFORM_NOISE: {
         printf("applying uniform noise...\n");
-        add_uniform_bernoulli_noise(bmp->image_raw, bmp->nbytes);
+        add_uniform_bernoulli_noise(bmp->image_raw, bmp->size_bytes);
     } break;
 
     case IMP_ORDERED_DITHERING: {
         printf("performing ordered dithering...\n");
-        ordered_dithering_single_channel(bmp->image_raw, bmp->nbytes, bmp->w,
+        ordered_dithering_single_channel(bmp->image_raw, bmp->size_bytes, bmp->w,
                                          palette_buf, palette_bytes);
     } break;
 
     case IMP_PALETTE_QUANTIZATION: {
-        palette_quantization(bmp->image_raw, bmp->nbytes, palette_buf,
+        palette_quantization(bmp->image_raw, bmp->size_bytes, palette_buf,
                              palette_bytes);
     } break;
     case IMP_DISABLED: {
@@ -195,9 +212,9 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
         exit(fprintf(stderr, "Could not create SDL renderer\n"));
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    update_global_image_render(bmp->image_render, bmp->w, bmp->h);
+    update_global_image_render(bmp->image_raw, bmp->w, bmp->h);
     create_button_bars();
-    bg_surface = SDL_LoadBMP("../res/patterns/gray-brick.bmp");
+    bg_surface = SDL_LoadBMP("../res/patterns/dark-gray-brick.bmp");
     bg_texture = SDL_CreateTextureFromSurface(renderer, bg_surface);
 
     if (atexit(cleanup_sdl) != 0 && atexit(cleanup_imp_ui) != 0) {
@@ -208,6 +225,9 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
     bool image_scroll_lock = false;
     Point clicked_distance = {0, 0};
     SDL_Rect image_rect = {UI_MARGIN_LEFT, 0, bmp->w, bmp->h};
+    int zoom_level = 0;
+
+    uint32_t curr_pencil_color = 0xFF0000;
 
     SDL_Event event;
     while (1) {
@@ -222,9 +242,19 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
             } break;
 
             case SDL_MOUSEMOTION: {
-                if (image_scroll_lock) {
+                if (imp_mousemode == IMP_CURSOR && image_scroll_lock) {
                     image_rect.x = event.motion.x - clicked_distance.x;
                     image_rect.y = event.motion.y - clicked_distance.y;
+                } else if(imp_mousemode == IMP_PENCIL && image_scroll_lock) {
+                    image_rect.x = event.motion.x - clicked_distance.x;
+                    image_rect.y = event.motion.y - clicked_distance.y;
+                } else if (imp_mousemode == IMP_PENCIL &&
+                           (event.motion.state & SDL_BUTTON_LMASK) != 0) {
+    
+                    int relx = event.button.x - image_rect.x;
+                    int rely = event.button.y - image_rect.y;
+                    BMP_set_pixel(bmp, relx*3, rely, curr_pencil_color);
+                    update_global_image_render(bmp->image_raw, bmp->w, bmp->h);
                 }
             } break;
 
@@ -240,26 +270,34 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
                             clicked_button_dispatch(button->task, bmp,
                                                     palette->arr,
                                                     palette->size);
-
-                            // copy image_raw (which has the applied effects)
-                            // into render
-                            uchar reversed[bmp->nbytes];
-                            BMP_reverse(reversed, bmp->image_raw, bmp->h,
-                                        3 * bmp->w, bmp->nbytes);
-                            memcpy(bmp->image_render, reversed, bmp->nbytes);
-
-                            update_global_image_render(bmp->image_render, bmp->w,
-                                                       bmp->h);
+                            update_global_image_render(bmp->image_raw, bmp->w, bmp->h);
                         }
                     }
 
+
                     if (mouse_over_image(event.button.x, event.button.y,
                                          image_rect.x, image_rect.y,
-                                         image_rect.w, image_rect.h) &&
-                        !image_scroll_lock) {
-                        image_scroll_lock = true;
-                        clicked_distance.x = event.button.x - image_rect.x;
-                        clicked_distance.y = event.button.y - image_rect.y;
+                                         image_rect.w, image_rect.h)) {
+
+                        if (imp_mousemode == IMP_CURSOR && !image_scroll_lock) {
+                            image_scroll_lock = true;
+                            clicked_distance.x = event.button.x - image_rect.x;
+                            clicked_distance.y = event.button.y - image_rect.y;
+                        } else if (imp_mousemode == IMP_PENCIL) {
+                            // TODO
+                        }
+                    }
+                } break;
+                case SDL_BUTTON_RIGHT: {
+                    if (mouse_over_image(event.button.x, event.button.y,
+                                         image_rect.x, image_rect.y,
+                                         image_rect.w, image_rect.h)) {
+
+                        if (imp_mousemode == IMP_PENCIL && !image_scroll_lock) {
+                            image_scroll_lock = true;
+                            clicked_distance.x = event.button.x - image_rect.x;
+                            clicked_distance.y = event.button.y - image_rect.y;
+                        }
                     }
                 } break;
                 }
@@ -276,28 +314,27 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
                         horiz_button_bar[i]->pressed = false;
                     }
                 } break;
+                case SDL_BUTTON_RIGHT: {
+                    if (image_scroll_lock) {
+                        image_scroll_lock = false;
+                    }
+                } break;
                 }
             } break;
 
             case SDL_MOUSEWHEEL: {
                 if (event.wheel.y > 0) {
-                    int dy =
-                        fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    int dx =
-                        fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    image_rect.h += dy;
-                    image_rect.w += dx;
-                    image_rect.y -= dy / 2;
-                    image_rect.x -= dx / 2;
+                    zoom_level += 1;
                 } else if (event.wheel.y < 0) {
-                    int dy =
-                        fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    int dx =
-                        fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    image_rect.h -= dy;
-                    image_rect.w -= dx;
-                    image_rect.y += dy / 2;
-                    image_rect.x += dx / 2;
+                    // int dy =
+                    //     fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    // int dx =
+                    //     fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    // image_rect.h -= dy;
+                    // image_rect.w -= dx;
+                    // image_rect.y += dy / 2;
+                    // image_rect.x += dx / 2;
+                    zoom_level -=1;
                 }
             } break;
 
@@ -319,17 +356,23 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
         // render the background pattern
         int xstart = -140;
         int ystart = -100;
-        for (int y = ystart; y < WINDOW_HEIGHT; y += 240) {
-            for (int x = xstart; x < WINDOW_WIDTH; x += 240) {
+        int bg_size = 240;
+        for (int y = ystart; y < WINDOW_HEIGHT; y += bg_size) {
+            for (int x = xstart; x < WINDOW_WIDTH; x += bg_size) {
                 SDL_RenderCopy(renderer, bg_texture, NULL,
-                               &(SDL_Rect){x, y, 240, 240});
+                               &(SDL_Rect){x, y, bg_size, bg_size});
             }
         }
 
+
         // render the working image
+        int zoom_dy = image_rect.h * MOUSE_ZOOM_RATE * zoom_level;
+        int zoom_dx = image_rect.w * MOUSE_ZOOM_RATE * zoom_level;
         SDL_RenderCopy(renderer, image_texture, NULL,
-                       &(SDL_Rect){image_rect.x, image_rect.y, image_rect.w,
-                                   image_rect.h});
+                       &(SDL_Rect){image_rect.x,
+                                   image_rect.y,
+                                   image_rect.w + zoom_dx,
+                                   image_rect.h + zoom_dy});
 
         // render the ui
         SDL_SetRenderDrawColor(renderer, 0x80, 0x00, 0X00, 255);
@@ -370,27 +413,27 @@ int cli_ui(BMP_file *bmp, U32Vec *palette, const char *flags) {
             case 'd':
                 printf("performing ordered dithering...\n");
                 ordered_dithering_single_channel(
-                    bmp->image_raw, bmp->nbytes,
+                    bmp->image_raw, bmp->size_bytes,
                     bmp->w, palette->arr,
                     U32Vec_size(palette));
                 break;
             case 'g':
                 printf("performing grayscale...\n");
-                grayscale(bmp->image_raw, bmp->nbytes);
+                grayscale(bmp->image_raw, bmp->size_bytes);
                 break;
             case 'i':
                 printf("performing invert...\n");
-                invert(bmp->image_raw, bmp->nbytes);
+                invert(bmp->image_raw, bmp->size_bytes);
                 break;
             case 'n':
                 printf("applying uniform noise...\n");
                 add_uniform_bernoulli_noise(bmp->image_raw,
-                                            bmp->nbytes);
+                                            bmp->size_bytes);
                 break;
             case 'p':
                 printf("performing palette quantization...\n");
                 palette_quantization(
-                    bmp->image_raw, bmp->nbytes,
+                    bmp->image_raw, bmp->size_bytes,
                     palette->arr, U32Vec_size(palette));
                 break;
             default:

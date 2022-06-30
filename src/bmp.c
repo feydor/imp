@@ -54,7 +54,8 @@ static void BMP_print_error(const char *filename) {
 
 void BMP_print_dimensions(BMP_file *bmp) {
     printf("image dimensions: %d x %d (w x h px)\n", bmp->w, bmp->h);
-    printf("image size: %d bytes\n", bmp->nbytes);
+    printf("image size: %d bytes\n", bmp->size_with_padding);
+    printf("padding per row: %d bytes\n", (bmp->size_with_padding - bmp->size_bytes) / bmp->w * 3);
 }
 
 
@@ -81,14 +82,13 @@ int BMP_load(BMP_file *bmp, const char *src) {
         return -1;
     }
 
-    bmp->nbytes = info_header->image_size_bytes;
+    bmp->size_with_padding = info_header->image_size_bytes;
     bmp->w = info_header->width_px;
     bmp->h = info_header->height_px;
-    bmp->image_raw = calloc(bmp->nbytes, 1);
-    bmp->image_render = calloc(bmp->nbytes, 1);
+    bmp->image_raw = calloc(bmp->size_with_padding, 1);
     bmp->file_header = file_header;
     bmp->info_header = info_header;
-    if (!bmp->image_raw || !bmp->image_render) {
+    if (!bmp->image_raw) {
         bmp_err = MALLOC_FAILED;
         BMP_print_error(src);
         return -1;
@@ -96,15 +96,15 @@ int BMP_load(BMP_file *bmp, const char *src) {
 
     // read the image data
     fseek(fp, file_header->offset, SEEK_SET);
-    fread(bmp->image_raw, 1, bmp->nbytes, fp);
+    fread(bmp->image_raw, 1, bmp->size_with_padding, fp);
 
     // generate the raw image for buffer manipulation
     // copy image data to buffer, strip end of row padding
     UCharVec image_buffer;
     UCharVec_init(&image_buffer);
-    unsigned width_bytes = bmp->nbytes / bmp->h;
+    unsigned width_bytes = bmp->size_with_padding / bmp->h;
     unsigned padding = width_bytes - 3 * bmp->w;
-    for (size_t i = 0; i < bmp->nbytes; i++) {
+    for (size_t i = 0; i < bmp->size_with_padding; i++) {
         // skip last two n bytes of every row (padding)
         if (i % width_bytes > width_bytes - padding - 1)
             continue;
@@ -112,12 +112,14 @@ int BMP_load(BMP_file *bmp, const char *src) {
     }
     memcpy(bmp->image_raw, image_buffer.arr, image_buffer.size);
 
+    bmp->size_bytes = image_buffer.size;
+
     // generate the image used for IO
     // reverse the byte array (first pixel becomes last pixel, second becomes
     // second-to-last, etc) reversed_bmp_buffer is only used for rendering
     // purposes
     size_t buf_size = UCharVec_size(&image_buffer);
-    BMP_reverse(bmp->image_render, image_buffer.arr, bmp->h, 3*bmp->w, buf_size);
+    BMP_reverse(bmp->image_raw, image_buffer.arr, bmp->h, 3*bmp->w, buf_size);
 
     UCharVec_free(&image_buffer);
     fclose(fp);
@@ -148,9 +150,9 @@ int BMP_write(BMP_file *bmp, const char *dest) {
     // add padding back to end of rows
     UCharVec image_with_padding;
     UCharVec_init(&image_with_padding);
-    size_t width_bytes = bmp->nbytes / bmp->h;
+    size_t width_bytes = bmp->size_with_padding / bmp->h;
     size_t padding = width_bytes - 3 * bmp->w;
-    for (size_t i = 0; i < bmp->nbytes - (padding * bmp->h); ++i) {
+    for (size_t i = 0; i < bmp->size_with_padding - (padding * bmp->h); ++i) {
         if (i != 0 && i % (width_bytes - padding) == 0) {
             for (size_t n = 0; n < padding; ++n) {
                 UCharVec_push(&image_with_padding, 0x00);
@@ -165,13 +167,24 @@ int BMP_write(BMP_file *bmp, const char *dest) {
         UCharVec_push(&image_with_padding, 0x00);
     }
 
-    fwrite(bmp->image_raw, 1, bmp->nbytes, fp);
+    assert(bmp->size_with_padding == image_with_padding.size);
+    fwrite(image_with_padding.arr, 1, bmp->size_with_padding, fp);
 
     UCharVec_free(&image_with_padding);
     fclose(fp);
     return 0;
 }
 
+void BMP_set_pixel(BMP_file *bmp, uint byte_x, uint y, uint32_t rgb) {
+    if (y > bmp->h || byte_x > (bmp->size_bytes / bmp->h)) {
+        return;
+    }
+
+    int i = byte_x + (3 * y * bmp->w);
+    bmp->image_raw[i] = rgb & 0x00FF00;
+    bmp->image_raw[i + 1] = (rgb & 0x00FF00) >> 8;
+    bmp->image_raw[i + 2] = (rgb & 0xFF0000) >> 16;
+}
 
 // bottom-left ->top-left
 void BMP_reverse(uchar *dest, uchar *src, size_t height, size_t width_bytes, size_t nbytes) {
@@ -185,11 +198,9 @@ void BMP_reverse(uchar *dest, uchar *src, size_t height, size_t width_bytes, siz
 void BMP_free(BMP_file *bmp) {
     assert(bmp);
     free(bmp->image_raw);
-    free(bmp->image_render);
     free(bmp->file_header);
     free(bmp->info_header);
     bmp->image_raw = NULL;
-    bmp->image_render = NULL;
     bmp->file_header = NULL;
     bmp->info_header = NULL;
 }
