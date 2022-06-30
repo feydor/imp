@@ -138,17 +138,17 @@ void create_button_bars() {
       
       // TODO: make the filenames NOT relative to the executable
       char filename[80];
-      sprintf(filename, "../res/icons/horiz-button1.bmp", i);
+      sprintf(filename, "../res/icons/horiz-button1.bmp");
       horiz_button_bar[i]->surface = SDL_LoadBMP(filename);
     }
 
     horiz_button_bar[0]->task = IMP_SAVE;
+    horiz_button_bar[0]->surface = SDL_LoadBMP("../res/icons/horiz-button0.bmp");
     horiz_button_bar[1]->task = IMP_INVERT;
     horiz_button_bar[2]->task = IMP_GRAYSCALE;
     horiz_button_bar[3]->task = IMP_UNIFORM_NOISE;
     horiz_button_bar[4]->task = IMP_PALETTE_QUANTIZATION;
     horiz_button_bar[5]->task = IMP_ORDERED_DITHERING;
-    horiz_button_bar[6]->task = IMP_SAVE;
 }
 
 void clicked_button_dispatch(ImpButtonTask task, size_t width_px,
@@ -257,6 +257,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     if (!renderer) {
         exit(fprintf(stderr, "Could not create SDL renderer\n"));
     }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     update_global_image_render(reversed_bmp_buffer, bmp_file.width_px,
                                bmp_file.height_px);
@@ -342,7 +343,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
         SDL_RenderClear(renderer);
 
         // render the working area
-        SDL_SetRenderDrawColor(renderer, 0x01, 0x01, 0x01, 0);
+        SDL_SetRenderDrawColor(renderer, 0x01, 0x01, 0x01, 255);
         SDL_RenderFillRect(renderer,
                            &(SDL_Rect){UI_MARGIN_LEFT, 0,
                                        WINDOW_WIDTH - UI_MARGIN_LEFT,
@@ -354,7 +355,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
                                    image_rect.h});
 
         // render the ui
-        SDL_SetRenderDrawColor(renderer, 0xF7, 0xF7, 0XF7, 0);
+        SDL_SetRenderDrawColor(renderer, 0xF7, 0xF7, 0XF7, 255);
         SDL_RenderFillRect(renderer,
                            &(SDL_Rect){UI_MARGIN_LEFT,
                                        WINDOW_HEIGHT - UI_MARGIN_BOTTOM,
@@ -365,9 +366,17 @@ static int handle_image(const char *src, const char *dest, const char *flags,
             ImpButton *button = horiz_button_bar[i];
             SDL_Texture *button_texture =
                 SDL_CreateTextureFromSurface(renderer, button->surface);
+
             SDL_RenderCopy(
                 renderer, button_texture, NULL,
                 &(SDL_Rect){button->x, button->y, button->w, button->h});
+
+            // print transparent overlay over disabled buttons
+            if (button->task == IMP_DISABLED) {
+                SDL_SetRenderDrawColor(renderer, 0x01, 0x01, 0x01, 200);
+                SDL_RenderFillRect(renderer, &(SDL_Rect){button->x, button->y,
+                                                         button->w, button->h});
+            }
         }
 
         SDL_RenderPresent(renderer);
