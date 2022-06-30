@@ -138,8 +138,6 @@ void create_button_bars() {
     horiz_button_bar[1]->task = IMP_INVERT;
     horiz_button_bar[2]->task = IMP_GRAYSCALE;
     horiz_button_bar[3]->task = IMP_UNIFORM_NOISE;
-    horiz_button_bar[4]->task = IMP_PALETTE_QUANTIZATION;
-    horiz_button_bar[5]->task = IMP_ORDERED_DITHERING;
 }
 
 void clicked_button_dispatch(ImpButtonTask task, BMP_file *bmp,
@@ -181,29 +179,7 @@ void clicked_button_dispatch(ImpButtonTask task, BMP_file *bmp,
     }
 }
 
-// Assumes Little-endian, 24bit bmp
-// bmp data is stored starting at bottom-left corner
-// flags and palette are optional
-static int handle_image(const char *flags, const char *palette) {
-    if (!SRC || !DEST) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    U32Vec palette_buffer;
-    U32Vec_init(&palette_buffer);
-    if (load_palette(&palette_buffer, palette) != 0) {
-        return -1;
-    }
-
-    BMP_file bmp;
-    if (BMP_load(&bmp, SRC) != 0) {
-        return -1;
-    }
-    BMP_print_dimensions(&bmp);
-
-
-    // write buffer to screen
+static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         exit(fprintf(stderr, "SDL could not be initialized.\nSDL error: %s\n",
                      SDL_GetError()));
@@ -219,7 +195,7 @@ static int handle_image(const char *flags, const char *palette) {
         exit(fprintf(stderr, "Could not create SDL renderer\n"));
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    update_global_image_render(bmp.image_render, bmp.w, bmp.h);
+    update_global_image_render(bmp->image_render, bmp->w, bmp->h);
     create_button_bars();
     bg_surface = SDL_LoadBMP("../res/patterns/gray-brick.bmp");
     bg_texture = SDL_CreateTextureFromSurface(renderer, bg_surface);
@@ -231,7 +207,7 @@ static int handle_image(const char *flags, const char *palette) {
     // TODO: keep image variables related to rendering in one place
     bool image_scroll_lock = false;
     Point clicked_distance = {0, 0};
-    SDL_Rect image_rect = {UI_MARGIN_LEFT, 0, bmp.w, bmp.h};
+    SDL_Rect image_rect = {UI_MARGIN_LEFT, 0, bmp->w, bmp->h};
 
     SDL_Event event;
     while (1) {
@@ -240,8 +216,8 @@ static int handle_image(const char *flags, const char *palette) {
             case SDL_KEYDOWN: {
                 switch (event.key.keysym.sym) {
                 case SDLK_ESCAPE: {
-                    exit(0);
-                } break;
+                    return 0;
+                }
                 }
             } break;
 
@@ -261,18 +237,19 @@ static int handle_image(const char *flags, const char *palette) {
                         if (ImpButton_mouseover(button, event.button.x,
                                                 event.button.y)) {
                             button->pressed = true;
-                            clicked_button_dispatch(
-                                button->task, &bmp,
-                                palette_buffer.arr, palette_buffer.size);
-                            
-                            // copy image_raw (which has the applied effects) into render
-                            uchar reversed[bmp.nbytes];
-                            BMP_reverse(reversed, bmp.image_raw, bmp.h, 3 * bmp.w, bmp.nbytes);
-                            memcpy(bmp.image_render, reversed, bmp.nbytes);
+                            clicked_button_dispatch(button->task, bmp,
+                                                    palette->arr,
+                                                    palette->size);
 
-                            update_global_image_render(bmp.image_render,
-                                                       bmp.w,
-                                                       bmp.h);
+                            // copy image_raw (which has the applied effects)
+                            // into render
+                            uchar reversed[bmp->nbytes];
+                            BMP_reverse(reversed, bmp->image_raw, bmp->h,
+                                        3 * bmp->w, bmp->nbytes);
+                            memcpy(bmp->image_render, reversed, bmp->nbytes);
+
+                            update_global_image_render(bmp->image_render, bmp->w,
+                                                       bmp->h);
                         }
                     }
 
@@ -297,32 +274,36 @@ static int handle_image(const char *flags, const char *palette) {
 
                     for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
                         horiz_button_bar[i]->pressed = false;
-                    } 
+                    }
                 } break;
                 }
             } break;
 
             case SDL_MOUSEWHEEL: {
                 if (event.wheel.y > 0) {
-                    int dy = fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    int dx = fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dy =
+                        fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dx =
+                        fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
                     image_rect.h += dy;
                     image_rect.w += dx;
-                    image_rect.y -= dy/2;
-                    image_rect.x -= dx/2;
+                    image_rect.y -= dy / 2;
+                    image_rect.x -= dx / 2;
                 } else if (event.wheel.y < 0) {
-                    int dy = fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    int dx = fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dy =
+                        fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dx =
+                        fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
                     image_rect.h -= dy;
                     image_rect.w -= dx;
-                    image_rect.y += dy/2;
-                    image_rect.x += dx/2;
+                    image_rect.y += dy / 2;
+                    image_rect.x += dx / 2;
                 }
             } break;
 
             case SDL_QUIT: {
-                exit(0);
-            } break;
+                return 0;
+            }
             }
         }
 
@@ -331,16 +312,17 @@ static int handle_image(const char *flags, const char *palette) {
         // render the working area
         SDL_SetRenderDrawColor(renderer, 0x24, 0x24, 0x24, 255);
         SDL_RenderFillRect(renderer,
-                    &(SDL_Rect){UI_MARGIN_LEFT, 0,
-                                WINDOW_WIDTH - UI_MARGIN_LEFT,
-                                WINDOW_HEIGHT - UI_MARGIN_BOTTOM});
-        
+                           &(SDL_Rect){UI_MARGIN_LEFT, 0,
+                                       WINDOW_WIDTH - UI_MARGIN_LEFT,
+                                       WINDOW_HEIGHT - UI_MARGIN_BOTTOM});
+
         // render the background pattern
         int xstart = -140;
         int ystart = -100;
         for (int y = ystart; y < WINDOW_HEIGHT; y += 240) {
             for (int x = xstart; x < WINDOW_WIDTH; x += 240) {
-                SDL_RenderCopy(renderer, bg_texture, NULL, &(SDL_Rect){ x, y, 240, 240 });
+                SDL_RenderCopy(renderer, bg_texture, NULL,
+                               &(SDL_Rect){x, y, 240, 240});
             }
         }
 
@@ -351,13 +333,16 @@ static int handle_image(const char *flags, const char *palette) {
 
         // render the ui
         SDL_SetRenderDrawColor(renderer, 0x80, 0x00, 0X00, 255);
-        SDL_RenderFillRect(renderer,
-                           &(SDL_Rect){0, 0, BUTTON_SIZE + BUTTON_MARGIN, WINDOW_HEIGHT});
+        SDL_RenderFillRect(
+            renderer,
+            &(SDL_Rect){0, 0, BUTTON_SIZE + BUTTON_MARGIN, WINDOW_HEIGHT});
         for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
             ImpButton *button = horiz_button_bar[i];
-            SDL_Texture *button_txt = button->pressed ? SDL_CreateTextureFromSurface(renderer, button->clicked)
-                                                   : SDL_CreateTextureFromSurface(renderer, button->surface);
-            
+            SDL_Texture *button_txt =
+                button->pressed
+                    ? SDL_CreateTextureFromSurface(renderer, button->clicked)
+                    : SDL_CreateTextureFromSurface(renderer, button->surface);
+
             SDL_RenderCopy(
                 renderer, button_txt, NULL,
                 &(SDL_Rect){button->x, button->y, button->w, button->h});
@@ -373,8 +358,11 @@ static int handle_image(const char *flags, const char *palette) {
         SDL_RenderPresent(renderer);
         SDL_Delay(1000 / 60);
     }
+}
 
-    // manipulate buffer
+
+int cli_ui(BMP_file *bmp, U32Vec *palette, const char *flags) {
+    // manipulate buffer based on flags
     if (flags) {
         for (size_t i = 0; i < strlen(flags); ++i) {
             char flag = flags[i];
@@ -382,28 +370,28 @@ static int handle_image(const char *flags, const char *palette) {
             case 'd':
                 printf("performing ordered dithering...\n");
                 ordered_dithering_single_channel(
-                    bmp.image_raw, bmp.nbytes,
-                    bmp.w, palette_buffer.arr,
-                    U32Vec_size(&palette_buffer));
+                    bmp->image_raw, bmp->nbytes,
+                    bmp->w, palette->arr,
+                    U32Vec_size(palette));
                 break;
             case 'g':
                 printf("performing grayscale...\n");
-                grayscale(bmp.image_raw, bmp.nbytes);
+                grayscale(bmp->image_raw, bmp->nbytes);
                 break;
             case 'i':
                 printf("performing invert...\n");
-                invert(bmp.image_raw, bmp.nbytes);
+                invert(bmp->image_raw, bmp->nbytes);
                 break;
             case 'n':
                 printf("applying uniform noise...\n");
-                add_uniform_bernoulli_noise(bmp.image_raw,
-                                            bmp.nbytes);
+                add_uniform_bernoulli_noise(bmp->image_raw,
+                                            bmp->nbytes);
                 break;
             case 'p':
                 printf("performing palette quantization...\n");
                 palette_quantization(
-                    bmp.image_raw, bmp.nbytes,
-                    palette_buffer.arr, U32Vec_size(&palette_buffer));
+                    bmp->image_raw, bmp->nbytes,
+                    palette->arr, U32Vec_size(palette));
                 break;
             default:
                 printf("'%c' is not a valid flag\n", flag);
@@ -412,22 +400,23 @@ static int handle_image(const char *flags, const char *palette) {
         }
     }
 
-    // open the output file and write the headers followed by the image data
-    if (BMP_write(&bmp, DEST) != 0) {
+    if (BMP_write(bmp, DEST) != 0) {
         return -1;
     }
 
-    U32Vec_free(&palette_buffer);
-    BMP_free(&bmp);
     return 0;
 }
 
 
+// Assumes Little-endian, 24bit bmp
+// bmp data is stored starting at bottom-left corner
+// flags and palette are optional
 int main(int argc, char *argv[]) {
     srand(time(NULL));
     int opt = 0, option_index = 0;
     opterr = 0;
     char *palette = NULL, *flags = NULL;
+    bool cli = false;
 
     while ((opt = getopt_long(argc, argv, OPTSTR, long_options,
                               &option_index)) != -1) {
@@ -435,18 +424,11 @@ int main(int argc, char *argv[]) {
         case 'h':
             usage(basename(argv[0]));
             exit(0);
-        case 'p':
-            palette = optarg;
-            break;
-        case 'f':
-            flags = optarg;
-            break;
-        case 'i':
-            SRC = optarg;
-            break;
-        case 'o':
-            DEST = optarg;
-            break;
+        case 'c': cli = true; break;
+        case 'p': palette = optarg; break;
+        case 'f': flags = optarg; break;
+        case 'i': SRC = optarg; break;
+        case 'o': DEST = optarg; break;
         case '?':
             fprintf(stderr, "Unknown option %c\n", optopt);
             usage(basename(argv[0]));
@@ -471,10 +453,27 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    if (handle_image(flags, palette) != 0) {
-        perror(ERR_HANDLEIMAGE);
-        exit(EXIT_FAILURE);
+    U32Vec palette_buffer;
+    U32Vec_init(&palette_buffer);
+    if (load_palette(&palette_buffer, palette) != 0) {
+        return -1;
     }
 
+    BMP_file bmp;
+    if (BMP_load(&bmp, SRC) != 0) {
+        return -1;
+    }
+    BMP_print_dimensions(&bmp);
+
+    int ret_code = cli ? cli_ui(&bmp, &palette_buffer, flags)
+                       : sdl_ui(&bmp, &palette_buffer);
+
+    if (ret_code != 0) {
+        perror("main");
+        return EXIT_FAILURE;
+    }
+
+    U32Vec_free(&palette_buffer);
+    BMP_free(&bmp);
     return EXIT_SUCCESS;
 }

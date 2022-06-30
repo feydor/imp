@@ -12,7 +12,7 @@
 #define ERR_MALLOC_NULL "malloc returned null"
 #define DEFAULT_PROGNAME "imp"
     
-#define OPTSTR "i:o:p:f:h"
+#define OPTSTR "i:o:p:f:hc"
 #define USAGE_FMT "Usage: %s [OPTIONS] INPUT\n\nOptions:\n\
     -h, --help               Display this message\n    -f, --flags              Image processing passes\n\
     -i, --input              Input filename\n    -o, --output             Write output to filename\n\n\
@@ -25,6 +25,7 @@ static struct option long_options[] = {
     {"flags", required_argument, NULL, 'f'},
     {"input", required_argument, NULL, 'i'},
     {"output", required_argument, NULL, 'o'},
+    {"cli", no_argument, NULL, 'c'},
     {NULL, 0, NULL, 0}
 };
 
