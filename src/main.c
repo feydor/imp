@@ -7,6 +7,7 @@
 #include <ctype.h>  /* for isdigit() */
 #include <errno.h>  /* for external errno variable */
 #include <libgen.h> /* for basename() */
+#include <stdbool.h> /* for boolean */
 #include <stdint.h> /* for uint32_t */
 #include <stdio.h>  /* for FILE, fprint, fread, stdin, stdout, stderr */
 #include <stdlib.h> /* for stroul, exit() */
@@ -25,11 +26,18 @@
 // TODO: make resources NOT relative to executable
 #define BUTTON00_PATH "../res/icons/button0.bmp"
 #define BUTTON_SIZE 64
-#define clicked_button_00(x, y, image_height) ( x < BUTTON_SIZE && y > UI_MARGIN_TOP + image_height )
+#define mouse_over_button_0(x, y, image_height) ( x < BUTTON_SIZE && y > WINDOW_HEIGHT - BUTTON_SIZE )
+#define mouse_over_image(x, y, image_x, image_y, image_w, image_h) \
+   ( x > image_x && x < image_x + image_w && y > image_y&& y < image_y + image_h)
 SDL_Window *window;
 SDL_Renderer *renderer;
 SDL_Surface *image_surface;
 SDL_Texture *image_texture;
+
+typedef struct {
+   int x;
+   int y;
+} Point;
 
 extern int errno;
 extern char *optarg; /* for use with getopt() */
@@ -214,6 +222,11 @@ static int handle_image(const char *src, const char *dest, const char *flags,
       fprintf(stderr, "atexit failed to register cleanup_sdl\n");
     }
 
+    // TODO: keep image variables related to rendering in one place
+    bool image_scroll_lock = false;
+    Point clicked_distance = { 0, 0 };
+    SDL_Rect image_rect = { UI_MARGIN_LEFT, UI_MARGIN_TOP, bmp_file.width_px, bmp_file.height_px };
+
     while (1) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -225,11 +238,18 @@ static int handle_image(const char *src, const char *dest, const char *flags,
                 }
             } break;
 
+            case SDL_MOUSEMOTION: {
+               if (image_scroll_lock) {
+                  image_rect.x = event.motion.x - clicked_distance.x;
+                  image_rect.y = event.motion.y - clicked_distance.y;
+               }
+            } break;
+
             case SDL_MOUSEBUTTONDOWN: {
                 switch (event.button.button) {
-                case (SDL_BUTTON_LEFT): {
-                    // if mouse click on bottom left red rectangle
-                    if (clicked_button_00((u_int)event.button.x, (u_int)event.button.y, bmp_file.height_px)) {
+                case SDL_BUTTON_LEFT: {
+                    // if mouse click on bottom left button
+                    if (mouse_over_button_0((u_int)event.button.x, (u_int)event.button.y, bmp_file.height_px)) {
                         printf("performing invert...\n");
                         invert(reversed_bmp_buffer,
                                UCharVec_size(&image_buffer));
@@ -240,8 +260,30 @@ static int handle_image(const char *src, const char *dest, const char *flags,
                         image_texture = SDL_CreateTextureFromSurface(
                             renderer, image_surface);
                     }
+
+                    if (mouse_over_image(event.button.x,
+                                         event.button.y,
+                                         image_rect.x,
+                                         image_rect.y,
+                                         image_rect.w,
+                                         image_rect.h)
+                           && !image_scroll_lock) {
+                        image_scroll_lock = true;
+                        clicked_distance.x = event.button.x - image_rect.x;
+                        clicked_distance.y = event.button.y - image_rect.y;
+                    }
                 } break;
                 }
+            } break;
+
+            case SDL_MOUSEBUTTONUP: {
+               switch (event.button.button) {
+               case SDL_BUTTON_LEFT: {
+                  if (image_scroll_lock) {
+                     image_scroll_lock = false;
+                  }
+               } break;
+               }
             } break;
 
             case SDL_QUIT: {
@@ -251,16 +293,29 @@ static int handle_image(const char *src, const char *dest, const char *flags,
         }
 
         SDL_RenderClear(renderer);
+
+        // render the working area
         SDL_SetRenderDrawColor(renderer, 0x01, 0x01, 0x01, 0);
         SDL_RenderFillRect(renderer, &(SDL_Rect){ UI_MARGIN_LEFT,
                                                   0,
                                                   WINDOW_WIDTH - UI_MARGIN_LEFT,
                                                   WINDOW_HEIGHT - UI_MARGIN_BOTTOM });
-        SDL_SetRenderDrawColor(renderer, 0xF7, 0xF7, 0XF7, 0);
-        SDL_RenderCopy(renderer, image_texture, NULL,
-                       &(SDL_Rect){UI_MARGIN_LEFT, UI_MARGIN_TOP,
-                                   bmp_file.width_px, bmp_file.height_px});
         
+        // render the working image
+        SDL_RenderCopy(renderer, image_texture, NULL,
+                       &(SDL_Rect){image_rect.x, image_rect.y,
+                                   image_rect.w, image_rect.h});
+        
+        // render the ui
+        SDL_SetRenderDrawColor(renderer, 0xF7, 0xF7, 0XF7, 0);
+        SDL_RenderFillRect(renderer, &(SDL_Rect){ UI_MARGIN_LEFT,
+                                                  WINDOW_HEIGHT - UI_MARGIN_BOTTOM,
+                                                  WINDOW_WIDTH,
+                                                  BUTTON_SIZE});
+         SDL_RenderFillRect(renderer, &(SDL_Rect){ 0,
+                                          0,
+                                          BUTTON_SIZE,
+                                          WINDOW_HEIGHT});                                           
         for (int i = 0, x_offset = 0; i < NUM_BUTTONS; ++i, x_offset += BUTTON_SIZE) {
             SDL_Texture *button = SDL_CreateTextureFromSurface(renderer, ui_button_surfaces[i]);
             SDL_RenderCopy(renderer, button, NULL, &(SDL_Rect){x_offset,
