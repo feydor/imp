@@ -25,6 +25,8 @@
 #define UI_MARGIN_BOTTOM 64
 #define UI_MARGIN_LEFT 64
 #define BUTTON_SIZE 64
+#define MOUSE_ZOOM_RATE 0.1f
+#define MIN_VIEW_SIZE 5
 #define mouse_over_image(x, y, image_x, image_y, image_w, image_h)             \
     (x > image_x && x < image_x + image_w && y > image_y &&                    \
      y < image_y + image_h)
@@ -288,6 +290,24 @@ static int handle_image(const char *flags, const char *palette) {
                 }
             } break;
 
+            case SDL_MOUSEWHEEL: {
+                if (event.wheel.y > 0) {
+                    int dy = fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dx = fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    image_rect.h += dy;
+                    image_rect.w += dx;
+                    image_rect.y -= dy/2;
+                    image_rect.x -= dx/2;
+                } else if (event.wheel.y < 0) {
+                    int dy = fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dx = fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    image_rect.h -= dy;
+                    image_rect.w -= dx;
+                    image_rect.y += dy/2;
+                    image_rect.x += dx/2;
+                }
+            } break;
+
             case SDL_QUIT: {
                 exit(0);
             } break;
@@ -297,7 +317,7 @@ static int handle_image(const char *flags, const char *palette) {
         SDL_RenderClear(renderer);
 
         // render the working area
-        SDL_SetRenderDrawColor(renderer, 0x01, 0x01, 0x01, 255);
+        SDL_SetRenderDrawColor(renderer, 0x24, 0x24, 0x24, 255);
         SDL_RenderFillRect(renderer,
                            &(SDL_Rect){UI_MARGIN_LEFT, 0,
                                        WINDOW_WIDTH - UI_MARGIN_LEFT,
