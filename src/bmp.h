@@ -58,6 +58,7 @@ typedef struct {
 int BMP_load(BMP_file *bmp, const char *src);
 int BMP_write(BMP_file *file, const char *dest);
 void BMP_print_dimensions(BMP_file *bmp);
+void BMP_reverse(uchar *dest, uchar *src, size_t height, size_t width_bytes, size_t nbytes);
 void BMP_free(BMP_file *bmp);
 
 #endif

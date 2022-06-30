@@ -43,6 +43,7 @@ typedef struct {
 extern int errno;
 extern char *optarg; /* for use with getopt() */
 extern int opterr, optind;
+char *SRC = NULL, *DEST = NULL;
 
 static void usage(const char *progname) {
     fprintf(stderr, USAGE_FMT, progname ? progname : DEFAULT_PROGNAME);
@@ -94,6 +95,13 @@ void cleanup_sdl() {
 }
 
 
+void cleanup_imp_ui() {
+    for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
+        ImpButton_free(horiz_button_bar[i]);
+    }
+}
+
+
 void update_global_image_render(uchar *buffer, size_t width_px,
                                 size_t height_px) {
     int depth = 24;
@@ -106,7 +114,6 @@ void update_global_image_render(uchar *buffer, size_t width_px,
 
 
 void create_button_bars() {
-    // TODO: free these buttons at clean up (ImpButton_free)
     for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
       horiz_button_bar[i] = ImpButton_create(i * BUTTON_SIZE, WINDOW_HEIGHT - BUTTON_SIZE, BUTTON_SIZE, BUTTON_SIZE);
       
@@ -125,34 +132,37 @@ void create_button_bars() {
     horiz_button_bar[5]->task = IMP_ORDERED_DITHERING;
 }
 
-void clicked_button_dispatch(ImpButtonTask task, size_t width_px,
-                             uchar *image_buf, size_t image_bytes,
+void clicked_button_dispatch(ImpButtonTask task, BMP_file *bmp,
                              uint32_t *palette_buf, size_t palette_bytes) {
     switch (task) {
+    case IMP_SAVE: {
+        printf("saving to file: %s\n", DEST);
+        BMP_write(bmp, DEST);
+    } break;
     case IMP_INVERT: {
         printf("performing invert...\n");
-        invert(image_buf, image_bytes);
+        invert(bmp->image_raw, bmp->nbytes);
         break;
     } break;
 
     case IMP_GRAYSCALE: {
         printf("performing grayscale...\n");
-        grayscale(image_buf, image_bytes);
+        grayscale(bmp->image_raw, bmp->nbytes);
     } break;
 
     case IMP_UNIFORM_NOISE: {
         printf("applying uniform noise...\n");
-        add_uniform_bernoulli_noise(image_buf, image_bytes);
+        add_uniform_bernoulli_noise(bmp->image_raw, bmp->nbytes);
     } break;
 
     case IMP_ORDERED_DITHERING: {
         printf("performing ordered dithering...\n");
-        ordered_dithering_single_channel(image_buf, image_bytes, width_px,
+        ordered_dithering_single_channel(bmp->image_raw, bmp->nbytes, bmp->w,
                                          palette_buf, palette_bytes);
     } break;
 
     case IMP_PALETTE_QUANTIZATION: {
-        palette_quantization(image_buf, image_bytes, palette_buf,
+        palette_quantization(bmp->image_raw, bmp->nbytes, palette_buf,
                              palette_bytes);
     } break;
     case IMP_DISABLED: {
@@ -164,9 +174,8 @@ void clicked_button_dispatch(ImpButtonTask task, size_t width_px,
 // Assumes Little-endian, 24bit bmp
 // bmp data is stored starting at bottom-left corner
 // flags and palette are optional
-static int handle_image(const char *src, const char *dest, const char *flags,
-                        const char *palette) {
-    if (!src || !dest) {
+static int handle_image(const char *flags, const char *palette) {
+    if (!SRC || !DEST) {
         errno = EINVAL;
         return -1;
     }
@@ -178,7 +187,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     }
 
     BMP_file bmp;
-    if (BMP_load(&bmp, src) != 0) {
+    if (BMP_load(&bmp, SRC) != 0) {
         return -1;
     }
     BMP_print_dimensions(&bmp);
@@ -206,7 +215,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     // create ui/buttons surfaces
     create_button_bars();
 
-    if (atexit(cleanup_sdl) != 0) {
+    if (atexit(cleanup_sdl) != 0 && atexit(cleanup_imp_ui) != 0) {
         fprintf(stderr, "atexit failed to register cleanup_sdl\n");
     }
 
@@ -243,9 +252,14 @@ static int handle_image(const char *src, const char *dest, const char *flags,
                         if (ImpButton_mouseover(button, event.button.x,
                                                 event.button.y)) {
                             clicked_button_dispatch(
-                                button->task, bmp.w,
-                                bmp.image_render, bmp.nbytes,
+                                button->task, &bmp,
                                 palette_buffer.arr, palette_buffer.size);
+                            
+                            // copy image_raw (which has the applied effects) into render
+                            uchar reversed[bmp.nbytes];
+                            BMP_reverse(reversed, bmp.image_raw, bmp.h, 3 * bmp.w, bmp.nbytes);
+                            memcpy(bmp.image_render, reversed, bmp.nbytes);
+
                             update_global_image_render(bmp.image_render,
                                                        bmp.w,
                                                        bmp.h);
@@ -362,7 +376,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     }
 
     // open the output file and write the headers followed by the image data
-    if (BMP_write(&bmp, dest) != 0) {
+    if (BMP_write(&bmp, DEST) != 0) {
         return -1;
     }
 
@@ -376,7 +390,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     int opt = 0, option_index = 0;
     opterr = 0;
-    char *src = NULL, *dest = NULL, *palette = NULL, *flags = NULL;
+    char *palette = NULL, *flags = NULL;
 
     while ((opt = getopt_long(argc, argv, OPTSTR, long_options,
                               &option_index)) != -1) {
@@ -391,10 +405,10 @@ int main(int argc, char *argv[]) {
             flags = optarg;
             break;
         case 'i':
-            src = optarg;
+            SRC = optarg;
             break;
         case 'o':
-            dest = optarg;
+            DEST = optarg;
             break;
         case '?':
             fprintf(stderr, "Unknown option %c\n", optopt);
@@ -412,15 +426,15 @@ int main(int argc, char *argv[]) {
 
     // get non-option arguments, ie the filename
     while (optind < argc) {
-        src = argv[optind++];
+        SRC = argv[optind++];
     }
 
-    if (!src || !dest) {
+    if (!SRC || !DEST) {
         usage(basename(argv[0]));
         exit(0);
     }
 
-    if (handle_image(src, dest, flags, palette) != 0) {
+    if (handle_image(flags, palette) != 0) {
         perror(ERR_HANDLEIMAGE);
         exit(EXIT_FAILURE);
     }

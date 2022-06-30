@@ -25,6 +25,21 @@ static int parse_headers(FILE *fp, BMP_file_header *file_header, BMP_info_header
 }
 
 
+// copies and horizontally flips the bytes of src into dest
+// ie top-left pixel -> top-right pixel
+static void buf_flip_horiz(uchar *dest, uchar *src, uint height, uint width_bytes) {
+    assert(src && dest);
+    for (size_t row = 0; row < height; ++row) {
+        uchar row_buf[width_bytes];
+        for (size_t i = 0; i < width_bytes; ++i) {
+            size_t end_of_row = ((row + 1) * width_bytes) - 1;
+            row_buf[i] = src[end_of_row - i];
+        }
+        memcpy(dest + (row * width_bytes), row_buf, width_bytes);
+    }
+}
+
+
 static void BMP_print_error(const char *filename) {
     char *fmt_str;
     switch (bmp_err) {
@@ -39,7 +54,7 @@ static void BMP_print_error(const char *filename) {
 
 void BMP_print_dimensions(BMP_file *bmp) {
     printf("image dimensions: %d x %d (w x h px)\n", bmp->w, bmp->h);
-    printf("image size: %ld bytes\n", bmp->nbytes);
+    printf("image size: %d bytes\n", bmp->nbytes);
 }
 
 
@@ -101,23 +116,8 @@ int BMP_load(BMP_file *bmp, const char *src) {
     // reverse the byte array (first pixel becomes last pixel, second becomes
     // second-to-last, etc) reversed_bmp_buffer is only used for rendering
     // purposes
-    // uchar reversed_bmp_buffer[bmp->nbytes];
     size_t buf_size = UCharVec_size(&image_buffer);
-    for (size_t i = 0; i < buf_size; ++i) {
-        bmp->image_render[i] = UCharVec_get(&image_buffer, buf_size - 1 - i);
-    }
-
-    // then do row-wise swap
-    for (size_t row = 0; row < bmp->h; ++row) {
-        size_t bytes_per_row = 3 * bmp->w;
-        uchar row_buf[bytes_per_row];
-        for (size_t i = 0; i < bytes_per_row; ++i) {
-            size_t end_of_row = ((row + 1) * bytes_per_row) - 1;
-            row_buf[i] = bmp->image_render[end_of_row - i];
-        }
-        memcpy(bmp->image_render + (row * bytes_per_row), row_buf,
-               bytes_per_row);
-    }
+    BMP_reverse(bmp->image_render, image_buffer.arr, bmp->h, 3*bmp->w, buf_size);
 
     UCharVec_free(&image_buffer);
     fclose(fp);
@@ -165,13 +165,22 @@ int BMP_write(BMP_file *bmp, const char *dest) {
         UCharVec_push(&image_with_padding, 0x00);
     }
 
-    fwrite(image_with_padding.arr, 1, bmp->nbytes, fp);
+    fwrite(bmp->image_raw, 1, bmp->nbytes, fp);
 
     UCharVec_free(&image_with_padding);
     fclose(fp);
     return 0;
 }
 
+
+// bottom-left ->top-left
+void BMP_reverse(uchar *dest, uchar *src, size_t height, size_t width_bytes, size_t nbytes) {
+    for (size_t i = 0; i < nbytes; ++i) {
+        dest[i] = src[nbytes - 1 - i];
+    }
+
+    buf_flip_horiz(dest, dest, height, width_bytes);
+}
 
 void BMP_free(BMP_file *bmp) {
     assert(bmp);
