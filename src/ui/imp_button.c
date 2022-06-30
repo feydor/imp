@@ -12,7 +12,9 @@ ImpButton *ImpButton_create(int x, int y, int w, int h) {
     }
 
     button->surface = NULL;
+    button->clicked = NULL;
     button->task = IMP_DISABLED;
+    button->pressed = false;
     button->x = x;
     button->y = y;
     button->h = h;

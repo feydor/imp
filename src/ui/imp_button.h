@@ -20,11 +20,13 @@ typedef enum {
  */
 typedef struct {
     ImpButtonTask task;
-    SDL_Surface *surface;
+    SDL_Surface *surface; // TODO: store SDL_Texture instead ???
+    SDL_Surface *clicked;
     int x;
     int y;
     int w;
     int h;
+    bool pressed;
 } ImpButton;
 
 /** NULL on failure */

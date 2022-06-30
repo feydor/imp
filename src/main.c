@@ -25,6 +25,7 @@
 #define UI_MARGIN_BOTTOM 64
 #define UI_MARGIN_LEFT 64
 #define BUTTON_SIZE 64
+#define BUTTON_MARGIN 2
 #define MOUSE_ZOOM_RATE 0.1f
 #define MIN_VIEW_SIZE 5
 #define mouse_over_image(x, y, image_x, image_y, image_w, image_h)             \
@@ -34,6 +35,8 @@ SDL_Window *window;
 SDL_Renderer *renderer;
 SDL_Surface *image_surface;
 SDL_Texture *image_texture;
+SDL_Surface *bg_surface;
+SDL_Texture *bg_texture;
 #define NUM_HORIZ_BUTTONS 10
 ImpButton *horiz_button_bar[NUM_HORIZ_BUTTONS];
 
@@ -114,19 +117,24 @@ void update_global_image_render(uchar *buffer, size_t width_px,
     image_texture = SDL_CreateTextureFromSurface(renderer, image_surface);
 }
 
-
 void create_button_bars() {
     for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
-      horiz_button_bar[i] = ImpButton_create(i * BUTTON_SIZE, WINDOW_HEIGHT - BUTTON_SIZE, BUTTON_SIZE, BUTTON_SIZE);
-      
-      // TODO: make the filenames NOT relative to the executable
-      char filename[80];
-      sprintf(filename, "../res/icons/horiz-button1.bmp");
-      horiz_button_bar[i]->surface = SDL_LoadBMP(filename);
+        horiz_button_bar[i] =
+            ImpButton_create(i * BUTTON_SIZE + BUTTON_MARGIN + i*2,
+                             WINDOW_HEIGHT - BUTTON_SIZE - BUTTON_MARGIN,
+                             BUTTON_SIZE, BUTTON_SIZE);
+
+        // TODO: make the filenames NOT relative to the executable
+        char filename[80];
+        sprintf(filename, "../res/icons/horiz-button1.bmp");
+        horiz_button_bar[i]->surface = SDL_LoadBMP(filename);
+        sprintf(filename, "../res/icons/horiz-button1-click.bmp");
+        horiz_button_bar[i]->clicked = SDL_LoadBMP(filename);
     }
 
     horiz_button_bar[0]->task = IMP_SAVE;
-    horiz_button_bar[0]->surface = SDL_LoadBMP("../res/icons/horiz-button0.bmp");
+    horiz_button_bar[0]->surface =
+        SDL_LoadBMP("../res/icons/horiz-button0.bmp");
     horiz_button_bar[1]->task = IMP_INVERT;
     horiz_button_bar[2]->task = IMP_GRAYSCALE;
     horiz_button_bar[3]->task = IMP_UNIFORM_NOISE;
@@ -211,11 +219,10 @@ static int handle_image(const char *flags, const char *palette) {
         exit(fprintf(stderr, "Could not create SDL renderer\n"));
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
     update_global_image_render(bmp.image_render, bmp.w, bmp.h);
-
-    // create ui/buttons surfaces
     create_button_bars();
+    bg_surface = SDL_LoadBMP("../res/patterns/gray-brick.bmp");
+    bg_texture = SDL_CreateTextureFromSurface(renderer, bg_surface);
 
     if (atexit(cleanup_sdl) != 0 && atexit(cleanup_imp_ui) != 0) {
         fprintf(stderr, "atexit failed to register cleanup_sdl\n");
@@ -253,6 +260,7 @@ static int handle_image(const char *flags, const char *palette) {
                         ImpButton *button = horiz_button_bar[i];
                         if (ImpButton_mouseover(button, event.button.x,
                                                 event.button.y)) {
+                            button->pressed = true;
                             clicked_button_dispatch(
                                 button->task, &bmp,
                                 palette_buffer.arr, palette_buffer.size);
@@ -286,6 +294,10 @@ static int handle_image(const char *flags, const char *palette) {
                     if (image_scroll_lock) {
                         image_scroll_lock = false;
                     }
+
+                    for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
+                        horiz_button_bar[i]->pressed = false;
+                    } 
                 } break;
                 }
             } break;
@@ -319,9 +331,18 @@ static int handle_image(const char *flags, const char *palette) {
         // render the working area
         SDL_SetRenderDrawColor(renderer, 0x24, 0x24, 0x24, 255);
         SDL_RenderFillRect(renderer,
-                           &(SDL_Rect){UI_MARGIN_LEFT, 0,
-                                       WINDOW_WIDTH - UI_MARGIN_LEFT,
-                                       WINDOW_HEIGHT - UI_MARGIN_BOTTOM});
+                    &(SDL_Rect){UI_MARGIN_LEFT, 0,
+                                WINDOW_WIDTH - UI_MARGIN_LEFT,
+                                WINDOW_HEIGHT - UI_MARGIN_BOTTOM});
+        
+        // render the background pattern
+        int xstart = -140;
+        int ystart = -100;
+        for (int y = ystart; y < WINDOW_HEIGHT; y += 240) {
+            for (int x = xstart; x < WINDOW_WIDTH; x += 240) {
+                SDL_RenderCopy(renderer, bg_texture, NULL, &(SDL_Rect){ x, y, 240, 240 });
+            }
+        }
 
         // render the working image
         SDL_RenderCopy(renderer, image_texture, NULL,
@@ -329,20 +350,16 @@ static int handle_image(const char *flags, const char *palette) {
                                    image_rect.h});
 
         // render the ui
-        SDL_SetRenderDrawColor(renderer, 0xF7, 0xF7, 0XF7, 255);
+        SDL_SetRenderDrawColor(renderer, 0x80, 0x00, 0X00, 255);
         SDL_RenderFillRect(renderer,
-                           &(SDL_Rect){UI_MARGIN_LEFT,
-                                       WINDOW_HEIGHT - UI_MARGIN_BOTTOM,
-                                       WINDOW_WIDTH, BUTTON_SIZE});
-        SDL_RenderFillRect(renderer,
-                           &(SDL_Rect){0, 0, BUTTON_SIZE, WINDOW_HEIGHT});
+                           &(SDL_Rect){0, 0, BUTTON_SIZE + BUTTON_MARGIN, WINDOW_HEIGHT});
         for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
             ImpButton *button = horiz_button_bar[i];
-            SDL_Texture *button_texture =
-                SDL_CreateTextureFromSurface(renderer, button->surface);
-
+            SDL_Texture *button_txt = button->pressed ? SDL_CreateTextureFromSurface(renderer, button->clicked)
+                                                   : SDL_CreateTextureFromSurface(renderer, button->surface);
+            
             SDL_RenderCopy(
-                renderer, button_texture, NULL,
+                renderer, button_txt, NULL,
                 &(SDL_Rect){button->x, button->y, button->w, button->h});
 
             // print transparent overlay over disabled buttons
