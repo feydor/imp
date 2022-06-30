@@ -84,32 +84,6 @@ static int load_palette(U32Vec *buffer, const char *palette) {
 }
 
 
-static void imagebuf_to_outputbuf(UCharVec *image_buffer, uchar *output_buffer,
-                                  unsigned size_bytes, unsigned width_bytes,
-                                  unsigned padding_bytes) {
-    UCharVec image_with_padding;
-    UCharVec_init(&image_with_padding);
-
-    for (size_t i = 0; i < UCharVec_size(image_buffer); ++i) {
-        if (i != 0 && i % (width_bytes - padding_bytes) == 0) {
-            for (size_t n = 0; n < padding_bytes; ++n) {
-                UCharVec_push(&image_with_padding, 0x00);
-            }
-        }
-
-        UCharVec_push(&image_with_padding, UCharVec_get(image_buffer, i));
-    }
-
-    // add EOF padding bytes
-    for (size_t n = 0; n < padding_bytes; ++n) {
-        UCharVec_push(&image_with_padding, 0x00);
-    }
-
-    UCharVec_copyto(&image_with_padding, output_buffer, size_bytes);
-    UCharVec_free(&image_with_padding);
-}
-
-
 void cleanup_sdl() {
     printf("cleaning up after SDL\n");
     SDL_DestroyTexture(image_texture);
@@ -203,44 +177,12 @@ static int handle_image(const char *src, const char *dest, const char *flags,
         return -1;
     }
 
-    BMP_file bmp_file;
-    if (BMP_load(&bmp_file, src) != 0) {
+    BMP_file bmp;
+    if (BMP_load(&bmp, src) != 0) {
         return -1;
     }
-    BMP_print_dimensions(&bmp_file);
+    BMP_print_dimensions(&bmp);
 
-    // copy image data to buffer, strip end of row padding
-    UCharVec image_buffer;
-    UCharVec_init(&image_buffer);
-    int width_bytes = bmp_file.image_size_bytes / bmp_file.height_px;
-    size_t padding = width_bytes - (bmp_file.width_px * 3);
-    for (size_t i = 0; i < bmp_file.image_size_bytes; i++) {
-        // skip last two n bytes of every row (padding)
-        if (i % width_bytes > width_bytes - padding - 1)
-            continue;
-        UCharVec_push(&image_buffer, bmp_file.raw_image[i]);
-    }
-
-    // reverse the byte array (first pixel becomes last pixel, second becomes
-    // second-to-last, etc) reversed_bmp_buffer is only used for rendering
-    // purposes
-    uchar reversed_bmp_buffer[bmp_file.image_size_bytes];
-    size_t buf_size = UCharVec_size(&image_buffer);
-    for (size_t i = 0; i < buf_size; ++i) {
-        reversed_bmp_buffer[i] = UCharVec_get(&image_buffer, buf_size - 1 - i);
-    }
-
-    // then do row-wise swap
-    for (size_t row = 0; row < bmp_file.height_px; ++row) {
-        size_t bytes_per_row = 3 * bmp_file.width_px;
-        uchar row_buf[bytes_per_row];
-        for (size_t i = 0; i < bytes_per_row; ++i) {
-            size_t end_of_row = ((row + 1) * bytes_per_row) - 1;
-            row_buf[i] = reversed_bmp_buffer[end_of_row - i];
-        }
-        memcpy(reversed_bmp_buffer + (row * bytes_per_row), row_buf,
-               bytes_per_row);
-    }
 
     // write buffer to screen
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
@@ -259,8 +201,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    update_global_image_render(reversed_bmp_buffer, bmp_file.width_px,
-                               bmp_file.height_px);
+    update_global_image_render(bmp.image_render, bmp.w, bmp.h);
 
     // create ui/buttons surfaces
     create_button_bars();
@@ -272,8 +213,7 @@ static int handle_image(const char *src, const char *dest, const char *flags,
     // TODO: keep image variables related to rendering in one place
     bool image_scroll_lock = false;
     Point clicked_distance = {0, 0};
-    SDL_Rect image_rect = {UI_MARGIN_LEFT, UI_MARGIN_TOP, bmp_file.width_px,
-                           bmp_file.height_px};
+    SDL_Rect image_rect = {UI_MARGIN_LEFT, 0, bmp.w, bmp.h};
 
     SDL_Event event;
     while (1) {
@@ -303,12 +243,12 @@ static int handle_image(const char *src, const char *dest, const char *flags,
                         if (ImpButton_mouseover(button, event.button.x,
                                                 event.button.y)) {
                             clicked_button_dispatch(
-                                button->task, bmp_file.width_px,
-                                reversed_bmp_buffer, bmp_file.image_size_bytes,
+                                button->task, bmp.w,
+                                bmp.image_render, bmp.nbytes,
                                 palette_buffer.arr, palette_buffer.size);
-                            update_global_image_render(reversed_bmp_buffer,
-                                                       bmp_file.width_px,
-                                                       bmp_file.height_px);
+                            update_global_image_render(bmp.image_render,
+                                                       bmp.w,
+                                                       bmp.h);
                         }
                     }
 
@@ -391,27 +331,27 @@ static int handle_image(const char *src, const char *dest, const char *flags,
             case 'd':
                 printf("performing ordered dithering...\n");
                 ordered_dithering_single_channel(
-                    image_buffer.arr, UCharVec_size(&image_buffer),
-                    bmp_file.width_px, palette_buffer.arr,
+                    bmp.image_raw, bmp.nbytes,
+                    bmp.w, palette_buffer.arr,
                     U32Vec_size(&palette_buffer));
                 break;
             case 'g':
                 printf("performing grayscale...\n");
-                grayscale(image_buffer.arr, UCharVec_size(&image_buffer));
+                grayscale(bmp.image_raw, bmp.nbytes);
                 break;
             case 'i':
                 printf("performing invert...\n");
-                invert(image_buffer.arr, UCharVec_size(&image_buffer));
+                invert(bmp.image_raw, bmp.nbytes);
                 break;
             case 'n':
                 printf("applying uniform noise...\n");
-                add_uniform_bernoulli_noise(image_buffer.arr,
-                                            UCharVec_size(&image_buffer));
+                add_uniform_bernoulli_noise(bmp.image_raw,
+                                            bmp.nbytes);
                 break;
             case 'p':
                 printf("performing palette quantization...\n");
                 palette_quantization(
-                    image_buffer.arr, UCharVec_size(&image_buffer),
+                    bmp.image_raw, bmp.nbytes,
                     palette_buffer.arr, U32Vec_size(&palette_buffer));
                 break;
             default:
@@ -421,18 +361,13 @@ static int handle_image(const char *src, const char *dest, const char *flags,
         }
     }
 
-    // back to output buffer, restore end of row padding
-    imagebuf_to_outputbuf(&image_buffer, bmp_file.raw_image,
-                          bmp_file.image_size_bytes, width_bytes, padding);
-
     // open the output file and write the headers followed by the image data
-    if (BMP_write(&bmp_file, dest) != 0) {
+    if (BMP_write(&bmp, dest) != 0) {
         return -1;
     }
 
     U32Vec_free(&palette_buffer);
-    UCharVec_free(&image_buffer);
-    free(bmp_file.raw_image);
+    BMP_free(&bmp);
     return 0;
 }
 

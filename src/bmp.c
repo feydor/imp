@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "bmp.h"
+#include "vector.h"
 
 static BMP_error bmp_err = 0;
 
@@ -34,9 +36,10 @@ static void BMP_print_error(const char *filename) {
     fprintf(stderr, fmt_str, filename);
 }
 
+
 void BMP_print_dimensions(BMP_file *bmp) {
-    printf("image dimensions: %d x %d (w x h px)\n", bmp->width_px, bmp->height_px);
-    printf("image size: %ld bytes\n", bmp->image_size_bytes);
+    printf("image dimensions: %d x %d (w x h px)\n", bmp->w, bmp->h);
+    printf("image size: %ld bytes\n", bmp->nbytes);
 }
 
 
@@ -63,13 +66,14 @@ int BMP_load(BMP_file *bmp, const char *src) {
         return -1;
     }
 
-    bmp->image_size_bytes = info_header->image_size_bytes;
-    bmp->width_px = info_header->width_px;
-    bmp->height_px = info_header->height_px;
-    bmp->raw_image = calloc(bmp->image_size_bytes, 1);
+    bmp->nbytes = info_header->image_size_bytes;
+    bmp->w = info_header->width_px;
+    bmp->h = info_header->height_px;
+    bmp->image_raw = calloc(bmp->nbytes, 1);
+    bmp->image_render = calloc(bmp->nbytes, 1);
     bmp->file_header = file_header;
     bmp->info_header = info_header;
-    if (!bmp->raw_image) {
+    if (!bmp->image_raw || !bmp->image_render) {
         bmp_err = MALLOC_FAILED;
         BMP_print_error(src);
         return -1;
@@ -77,8 +81,45 @@ int BMP_load(BMP_file *bmp, const char *src) {
 
     // read the image data
     fseek(fp, file_header->offset, SEEK_SET);
-    fread(bmp->raw_image, 1, bmp->image_size_bytes, fp);
+    fread(bmp->image_raw, 1, bmp->nbytes, fp);
 
+    // generate the raw image for buffer manipulation
+    // copy image data to buffer, strip end of row padding
+    UCharVec image_buffer;
+    UCharVec_init(&image_buffer);
+    unsigned width_bytes = bmp->nbytes / bmp->h;
+    unsigned padding = width_bytes - 3 * bmp->w;
+    for (size_t i = 0; i < bmp->nbytes; i++) {
+        // skip last two n bytes of every row (padding)
+        if (i % width_bytes > width_bytes - padding - 1)
+            continue;
+        UCharVec_push(&image_buffer, bmp->image_raw[i]);
+    }
+    memcpy(bmp->image_raw, image_buffer.arr, image_buffer.size);
+
+    // generate the image used for IO
+    // reverse the byte array (first pixel becomes last pixel, second becomes
+    // second-to-last, etc) reversed_bmp_buffer is only used for rendering
+    // purposes
+    // uchar reversed_bmp_buffer[bmp->nbytes];
+    size_t buf_size = UCharVec_size(&image_buffer);
+    for (size_t i = 0; i < buf_size; ++i) {
+        bmp->image_render[i] = UCharVec_get(&image_buffer, buf_size - 1 - i);
+    }
+
+    // then do row-wise swap
+    for (size_t row = 0; row < bmp->h; ++row) {
+        size_t bytes_per_row = 3 * bmp->w;
+        uchar row_buf[bytes_per_row];
+        for (size_t i = 0; i < bytes_per_row; ++i) {
+            size_t end_of_row = ((row + 1) * bytes_per_row) - 1;
+            row_buf[i] = bmp->image_render[end_of_row - i];
+        }
+        memcpy(bmp->image_render + (row * bytes_per_row), row_buf,
+               bytes_per_row);
+    }
+
+    UCharVec_free(&image_buffer);
     fclose(fp);
     return 0;
 }
@@ -102,10 +143,31 @@ int BMP_write(BMP_file *bmp, const char *dest) {
     fwrite(&bmp->file_header->reserved2, sizeof(bmp->file_header->reserved2), 1, fp);
     fwrite(&bmp->file_header->offset, sizeof(bmp->file_header->offset), 1, fp);
     fwrite(bmp->info_header, sizeof(BMP_info_header), 1, fp);
-
     fseek(fp, bmp->file_header->offset, SEEK_SET);
-    fwrite(bmp->raw_image, 1, bmp->image_size_bytes, fp);
 
+    // add padding back to end of rows
+    UCharVec image_with_padding;
+    UCharVec_init(&image_with_padding);
+    size_t width_bytes = bmp->nbytes / bmp->h;
+    size_t padding = width_bytes - 3 * bmp->w;
+    for (size_t i = 0; i < bmp->nbytes - (padding * bmp->h); ++i) {
+        if (i != 0 && i % (width_bytes - padding) == 0) {
+            for (size_t n = 0; n < padding; ++n) {
+                UCharVec_push(&image_with_padding, 0x00);
+            }
+        }
+
+        UCharVec_push(&image_with_padding, bmp->image_raw[i]);
+    }
+
+    // add EOF padding bytes
+    for (size_t n = 0; n < padding; ++n) {
+        UCharVec_push(&image_with_padding, 0x00);
+    }
+
+    fwrite(image_with_padding.arr, 1, bmp->nbytes, fp);
+
+    UCharVec_free(&image_with_padding);
     fclose(fp);
     return 0;
 }
@@ -113,24 +175,12 @@ int BMP_write(BMP_file *bmp, const char *dest) {
 
 void BMP_free(BMP_file *bmp) {
     assert(bmp);
-    free(bmp->raw_image);
+    free(bmp->image_raw);
+    free(bmp->image_render);
     free(bmp->file_header);
     free(bmp->info_header);
-    bmp->raw_image = NULL;
+    bmp->image_raw = NULL;
+    bmp->image_render = NULL;
     bmp->file_header = NULL;
     bmp->info_header = NULL;
 }
-
-
-// int main(int argc, char *argv[]) {
-//     if (argc != 2) {
-//         printf("requires an argument\n");
-//         return -1;
-//     }
-//     BMP_file file;
-//     BMP_load(&file, argv[1]);
-//     BMP_print_dimensions(&file);
-//     BMP_write(&file, "test.bmp");
-//     BMP_free(&file);
-//     return 0;
-// }

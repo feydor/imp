@@ -47,10 +47,11 @@ typedef enum {
 typedef struct {
     BMP_file_header *file_header;
     BMP_info_header *info_header;
-    uchar *raw_image;
-    unsigned width_px;
-    unsigned height_px;
-    size_t image_size_bytes;
+    uchar *image_raw;               // image without end of row padding
+    uchar *image_render;            // image as accepted by SDL
+    unsigned w;
+    unsigned h;
+    unsigned nbytes;
 } BMP_file;
 
 /** all BMP_* functions set the global bmp_err variable on error and then return -1*/
