@@ -240,8 +240,13 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
 
     uint32_t curr_pencil_color = 0xFF0000;
 
-    SDL_Event event;
+    
+    uint64_t delta_time = floor(1000.0f / 60.0f);
     while (1) {
+        uint64_t start_time = SDL_GetTicks64();
+
+        SDL_Event event;
+        imp_event(&imp, &event);
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
             case SDL_KEYDOWN: {
@@ -386,7 +391,9 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
         }
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(1000 / 60);
+
+        uint64_t end_time = SDL_GetTicks64();
+        SDL_Delay(fmax(10, delta_time - (start_time - end_time)));
     }
 }
 
