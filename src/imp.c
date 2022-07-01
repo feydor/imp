@@ -6,8 +6,8 @@
 #include <string.h>
 #define MAX(a, b) (a > b ? a : b)
 
-#define DEFAULT_CANVAS_H 200
-#define DEFAULT_CANVAS_W 300
+#define DEFAULT_CANVAS_H 400
+#define DEFAULT_CANVAS_W 600
 #define DEFAULT_WINDOW_H 600
 #define DEFAULT_WINDOW_W 800
 #define DEFAULT_N_LAYERS 1

@@ -17,12 +17,15 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
     menu->direction = direction;
 
     int menu_w = 0, menu_h = 0;
+    char filename[32];
     if (orientation == IMP_HORIZ) {
         menu_w = N * DEFAULT_BUTTON_W;
         menu_h = DEFAULT_BUTTON_H;
+        sprintf(filename, "horiz-button");
     } else {
         menu_w = DEFAULT_BUTTON_W;
         menu_h = N * DEFAULT_BUTTON_H;
+        sprintf(filename, "vert-button");
     }
 
     menu->n = N;
@@ -33,11 +36,11 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
     }
 
     for (int i = 0; i < menu->n; ++i) {
-        char filename[255];
-        sprintf(filename, "../res/icons/horiz-button%d.bmp", i);
-        SDL_Surface *surf = SDL_LoadBMP(filename);
+        char path[255];
+        sprintf(path, "../res/icons/%s%d.bmp", filename, i);
+        SDL_Surface *surf = SDL_LoadBMP(path);
         if (!surf) {
-            fprintf(stderr, "failed to load texture from file: '%s'\n", filename);
+            fprintf(stderr, "failed to load texture from file: '%s'\n", path);
         }
         SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, surf);
         ImpButton *button = malloc(sizeof(ImpButton));
@@ -48,7 +51,6 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
         button->texture = text;
         button->w = DEFAULT_BUTTON_W;
         button->h = DEFAULT_BUTTON_H;
-        // button->rect = (SDL_Rect){ xoff, yoff, DEFAULT_BUTTON_W, DEFAULT_BUTTON_H };
         menu->buttons[i] = button;
 
         SDL_FreeSurface(surf);
@@ -59,17 +61,18 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
 
 void imp_buttonmenu_render(Imp *imp, ImpButtonMenu *menu) {
     int dx = 0, dy = 0;
+    int gap = 2;
     if (menu->orientation == IMP_HORIZ) {
         if (menu->direction == IMP_RIGHTWARDS) {
-            dx = DEFAULT_BUTTON_W;
+            dx = DEFAULT_BUTTON_W + gap;
         } else {
-            dx = -DEFAULT_BUTTON_W;
+            dx = -DEFAULT_BUTTON_W + gap;
         }
     } else {
         if (menu->direction == IMP_DOWNWARDS) {
-            dy = DEFAULT_BUTTON_H;
+            dy = DEFAULT_BUTTON_H + gap;
         } else {
-            dy = -DEFAULT_BUTTON_H;
+            dy = -DEFAULT_BUTTON_H + gap;
         }
     }
 
