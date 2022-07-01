@@ -1,4 +1,5 @@
 #include "imp.h"
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -9,100 +10,19 @@
 #define DEFAULT_CANVAS_W 300
 #define DEFAULT_WINDOW_H 600
 #define DEFAULT_WINDOW_W 800
+#define DEFAULT_N_LAYERS 1
+#define DEFAULT_N_BUTTON_MENUS 2
+#define N_BUTTON_VERT 2
+#define N_BUTTON_HORIZ 4
 
-#define DEFAULT_BUTTON_W 64
-#define DEFAULT_BUTTON_H 64
-typedef struct {
-    SDL_Texture *texture;
-    SDL_Rect rect;
-} ImpButton;
-
-typedef struct {
-    ImpButton **buttons;
-    int n;
-    SDL_Rect rect;
-} ImpButtonMenu;
-
-ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Rect area) {
-    assert(area.w >= DEFAULT_BUTTON_W && area.h >= DEFAULT_BUTTON_H);
-    ImpButtonMenu *menu = malloc(sizeof(ImpButtonMenu));
-    if (!menu) {
-        return NULL;
-    }
-
-    menu->n = area.w / DEFAULT_BUTTON_W;
-    menu->rect = (SDL_Rect){ area.x, area.y, menu->n * DEFAULT_BUTTON_W, area.h };
-    menu->buttons = malloc(sizeof(ImpButton *) * menu->n);
-    if (!menu->buttons) {
-        return NULL;
-    }
-
-    int xoff = 0;
-    for (int i = 0; i < menu->n; ++i) {
-        char filename[255];
-        sprintf(filename, "../res/icons/horiz-button%d.bmp", i);
-        SDL_Surface *surf = SDL_LoadBMP(filename);
-        SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, surf);
-        ImpButton *button = malloc(sizeof(ImpButton));
-        if (!button) {
-            return NULL;
-        }
-
-        button->texture = text;
-        button->rect = (SDL_Rect){ xoff, area.y, DEFAULT_BUTTON_W, area.h };
-        xoff += DEFAULT_BUTTON_W;
-        menu->buttons[i] = button; // TODO: does this work?
-
-        // SDL_DestroySurface(surf);
-    }
-    
-    return menu;
-}
-
-void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
-    for (int i = 0; i < menu->n; ++i) {
-        ImpButton *button = menu->buttons[i];
-        SDL_RenderCopy(renderer, button->texture, NULL, &button->rect);
-    }
-}
-
-
-typedef enum {
-    IMP_CURSOR,
-    IMP_PENCIL,
-} ImpCursorMode;
-
-typedef enum {
-    IMP_NORMAL_EXIT = 1,
-} ImpRetCode;
-
-typedef struct Imp {
-    SDL_Renderer *renderer;
-    u32 color;
-    int nzoom;
-    
-    struct Cursor {
-        int x, y;
-        ImpCursorMode mode;
-        bool pressed;
-    } cursor;
-
-    struct Canvas {
-        int x, y, w, h;
-        SDL_Texture *texture;
-    } canvas;
-
-    ImpButtonMenu *button_menu;
-} Imp;
-
-
-Imp *create_imp(SDL_Renderer *renderer) {
+Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
     Imp *imp = malloc(sizeof(Imp));
-    if (imp == NULL) {
+    if (!imp) {
         return NULL;
     }
 
     imp->renderer = renderer;
+    imp->window = window;
     imp->color = 0xFF0000;
     imp->nzoom = 0;
 
@@ -110,18 +30,40 @@ Imp *create_imp(SDL_Renderer *renderer) {
     imp->cursor.mode = IMP_CURSOR;
     imp->cursor.pressed = false;
 
-    imp->canvas.x = 0;
-    imp->canvas.y = 0;
+    int w, h;
+    SDL_GetWindowSize(window, &w, &h);
+    imp->canvas.x = w / 2 - DEFAULT_CANVAS_W / 2;
+    imp->canvas.y = h / 2 - DEFAULT_CANVAS_H / 2;
     imp->canvas.w = DEFAULT_CANVAS_W;
     imp->canvas.h = DEFAULT_CANVAS_H;
 
-    SDL_Rect menu_area = { 0, DEFAULT_WINDOW_H - 64, 128, 64 };
-    imp->button_menu = create_imp_button_menu(renderer, menu_area);
+    imp->n_button_menus = DEFAULT_N_BUTTON_MENUS;
+    imp->button_menus = malloc(sizeof(ImpButtonMenu *) * imp->n_button_menus);
+    if (!imp->button_menus) {
+        return NULL;
+    }
+
+    imp->button_menus[0] = create_imp_button_menu(renderer, (SDL_Point){0, 0},
+        N_BUTTON_VERT, IMP_VERT, IMP_DOWNWARDS);
+    imp->button_menus[1] = create_imp_button_menu(renderer, (SDL_Point){0, h-64},
+        N_BUTTON_HORIZ, IMP_HORIZ, IMP_RIGHTWARDS);
+
+    imp->n_layers = DEFAULT_N_LAYERS;
+    imp->layers = malloc(sizeof(ImpLayer *) * imp->n_layers);
+    if (!imp->layers) {
+        return NULL;
+    }
+    for (int i = 0; i < imp->n_layers; ++i) {
+        imp->layers[i] = create_imp_layer(
+            (SDL_Rect){ imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h});
+    }
+
     return imp;
 }
 
 
 int imp_event(Imp *imp, SDL_Event *e) {
+    (void)imp;
     switch (e->type) {
         case SDL_QUIT: return IMP_NORMAL_EXIT;
         case SDL_KEYDOWN: {
@@ -150,17 +92,24 @@ int imp_event(Imp *imp, SDL_Event *e) {
         case SDL_BUTTON_RIGHT: {
             // TODO
         } break;
-        }
+        } break;
     }
 
     return 0;
 }
 
 
+void imp_update(Imp *imp, float dt) {
+    // TODO
+    (void) imp;
+    (void) dt;
+}
+
+
 void imp_render(Imp *imp, SDL_Window *window) {
     SDL_RenderClear(imp->renderer);
 
-    // render bg
+    // render bg/window
     SDL_SetRenderDrawColor(imp->renderer, 0x33, 0x33, 0x33, 255);
     SDL_Rect win_rect = {0};
     SDL_GetWindowSize(window, &win_rect.w, &win_rect.h);
@@ -171,16 +120,20 @@ void imp_render(Imp *imp, SDL_Window *window) {
     SDL_Rect canvas_rect = { imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h };
     SDL_RenderFillRect(imp->renderer, &canvas_rect);
 
-    imp_buttonmenu_render(imp->renderer, imp->button_menu);
+    // render ui
+    for (int i = 0; i < imp->n_button_menus; ++i)
+        imp_buttonmenu_render(imp, imp->button_menus[i]);
+    for (int i = 0; i < imp->n_layers; ++i)
+        imp_layer_render(imp->renderer, imp->layers[i]);
 }
 
 
 static void imp_print(ImpRetCode ret) {
-    char *message[69];
+    char message[69];
     switch (ret) {
-    case IMP_NORMAL_EXIT: break;
+    case IMP_NORMAL_EXIT: sprintf(message, "Exiting imp succesfully: %d\n", ret); break;
     }
-    printf("FIXME");
+    puts(message);
 }
 
 
@@ -195,7 +148,7 @@ int main(void) {
         exit(fprintf(stderr, "Could not create SDL Renderer\n"));
     }
 
-    Imp *imp = create_imp(renderer);
+    Imp *imp = create_imp(renderer, window);
     if (!imp) {
         exit(fprintf(stderr, "imp was NULL\n"));
     }
@@ -214,6 +167,7 @@ int main(void) {
             }
         }
 
+        imp_update(imp, dt);
         imp_render(imp, window);
         SDL_RenderPresent(renderer);
 
