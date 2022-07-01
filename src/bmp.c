@@ -27,7 +27,7 @@ static int parse_headers(FILE *fp, BMP_file_header *file_header, BMP_info_header
 
 // copies and horizontally flips the bytes of src into dest
 // ie top-left pixel -> top-right pixel
-static void buf_flip_horiz(uchar *dest, uchar *src, uint height, uint width_bytes) {
+void buf_flip_horiz(uchar *dest, uchar *src, uint height, uint width_bytes) {
     assert(src && dest);
     for (size_t row = 0; row < height; ++row) {
         uchar row_buf[width_bytes];

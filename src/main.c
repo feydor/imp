@@ -25,7 +25,7 @@
 #define UI_MARGIN_BOTTOM 64
 #define UI_MARGIN_LEFT 64
 #define BUTTON_SIZE 64
-#define BUTTON_MARGIN 2
+#define BUTTON_MARGIN 5
 #define MOUSE_ZOOM_RATE 0.1f
 #define MIN_VIEW_SIZE 5
 #define mouse_over_image(x, y, image_x, image_y, image_w, image_h)             \
@@ -127,6 +127,17 @@ void update_global_image_render(uchar *buffer, size_t width_px,
         gmask = 0x00FF00;
         bmask = 0x0000FF;
     #endif
+
+    if (image_surface != NULL) {
+        SDL_FreeSurface(image_surface);
+        image_surface = NULL;
+    }
+
+    if (image_texture != NULL) {
+        SDL_DestroyTexture(image_texture);
+        image_texture = NULL;
+    }
+
     image_surface =
         SDL_CreateRGBSurfaceFrom(buffer, width_px, height_px, depth, pitch,
                                  rmask, gmask, bmask, 0);
@@ -137,7 +148,7 @@ void update_global_image_render(uchar *buffer, size_t width_px,
 void create_button_bars() {
     for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
         horiz_button_bar[i] =
-            ImpButton_create(i * BUTTON_SIZE + BUTTON_MARGIN + i*2,
+            ImpButton_create(i * BUTTON_SIZE + BUTTON_MARGIN + 2*i*BUTTON_MARGIN,
                              WINDOW_HEIGHT - BUTTON_SIZE - BUTTON_MARGIN,
                              BUTTON_SIZE, BUTTON_SIZE);
 
@@ -150,11 +161,11 @@ void create_button_bars() {
     }
 
     horiz_button_bar[0]->task = IMP_SAVE;
-    horiz_button_bar[0]->surface =
-        SDL_LoadBMP("../res/icons/horiz-button0.bmp");
+    horiz_button_bar[0]->surface = SDL_LoadBMP("../res/icons/horiz-button0.bmp");
     horiz_button_bar[1]->task = IMP_INVERT;
     horiz_button_bar[2]->task = IMP_GRAYSCALE;
     horiz_button_bar[3]->task = IMP_UNIFORM_NOISE;
+    horiz_button_bar[4]->task = IMP_HORIZ_FLIP;
 }
 
 void clicked_button_dispatch(ImpButtonTask task, BMP_file *bmp,
@@ -165,18 +176,15 @@ void clicked_button_dispatch(ImpButtonTask task, BMP_file *bmp,
         BMP_write(bmp, DEST);
     } break;
     case IMP_INVERT: {
-        printf("performing invert...\n");
         invert(bmp->image_raw, bmp->size_bytes);
         break;
     } break;
 
     case IMP_GRAYSCALE: {
-        printf("performing grayscale...\n");
         grayscale(bmp->image_raw, bmp->size_bytes);
     } break;
 
     case IMP_UNIFORM_NOISE: {
-        printf("applying uniform noise...\n");
         add_uniform_bernoulli_noise(bmp->image_raw, bmp->size_bytes);
     } break;
 
@@ -187,12 +195,17 @@ void clicked_button_dispatch(ImpButtonTask task, BMP_file *bmp,
     } break;
 
     case IMP_PALETTE_QUANTIZATION: {
+        printf("performing palette quantization...\n");
         palette_quantization(bmp->image_raw, bmp->size_bytes, palette_buf,
                              palette_bytes);
     } break;
+
+    case IMP_HORIZ_FLIP: {
+        buf_flip_horiz(bmp->image_raw, bmp->image_raw, bmp->h, bmp->w * 3);
+    } break;
     case IMP_DISABLED: {
       printf("this button is disabled\n");
-    }
+    } break;
     }
 }
 
@@ -214,7 +227,7 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     update_global_image_render(bmp->image_raw, bmp->w, bmp->h);
     create_button_bars();
-    bg_surface = SDL_LoadBMP("../res/patterns/dark-gray-brick.bmp");
+    bg_surface = SDL_LoadBMP("../res/patterns/gray-brick.bmp");
     bg_texture = SDL_CreateTextureFromSurface(renderer, bg_surface);
 
     if (atexit(cleanup_sdl) != 0 && atexit(cleanup_imp_ui) != 0) {
@@ -224,7 +237,7 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
     // TODO: keep image variables related to rendering in one place
     bool image_scroll_lock = false;
     Point clicked_distance = {0, 0};
-    SDL_Rect image_rect = {UI_MARGIN_LEFT, 0, bmp->w, bmp->h};
+    SDL_Rect image_rect = {0, 0, bmp->w, bmp->h};
     int zoom_level = 0;
 
     uint32_t curr_pencil_color = 0xFF0000;
@@ -242,18 +255,17 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
             } break;
 
             case SDL_MOUSEMOTION: {
-                if (imp_mousemode == IMP_CURSOR && image_scroll_lock) {
-                    image_rect.x = event.motion.x - clicked_distance.x;
-                    image_rect.y = event.motion.y - clicked_distance.y;
-                } else if(imp_mousemode == IMP_PENCIL && image_scroll_lock) {
+                if (image_scroll_lock) {
                     image_rect.x = event.motion.x - clicked_distance.x;
                     image_rect.y = event.motion.y - clicked_distance.y;
                 } else if (imp_mousemode == IMP_PENCIL &&
                            (event.motion.state & SDL_BUTTON_LMASK) != 0) {
-    
-                    int relx = event.button.x - image_rect.x;
-                    int rely = event.button.y - image_rect.y;
-                    BMP_set_pixel(bmp, relx*3, rely, curr_pencil_color);
+                    int xrel = event.motion.x - image_rect.x;
+                    int yrel = event.motion.y - image_rect.y;
+
+                    for (int i = 0; i < 4; ++i)
+                        for (int j = 0; j < 4; j++)
+                            BMP_set_pixel(bmp, 3*j + (xrel*3), yrel + i, curr_pencil_color);
                     update_global_image_render(bmp->image_raw, bmp->w, bmp->h);
                 }
             } break;
@@ -274,9 +286,7 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
                         }
                     }
 
-
-                    if (mouse_over_image(event.button.x, event.button.y,
-                                         image_rect.x, image_rect.y,
+                    if (mouse_over_image(event.button.x, event.button.y, image_rect.x, image_rect.y,
                                          image_rect.w, image_rect.h)) {
 
                         if (imp_mousemode == IMP_CURSOR && !image_scroll_lock) {
@@ -289,8 +299,7 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
                     }
                 } break;
                 case SDL_BUTTON_RIGHT: {
-                    if (mouse_over_image(event.button.x, event.button.y,
-                                         image_rect.x, image_rect.y,
+                    if (mouse_over_image(event.button.x, event.button.y, image_rect.x, image_rect.y,
                                          image_rect.w, image_rect.h)) {
 
                         if (imp_mousemode == IMP_PENCIL && !image_scroll_lock) {
@@ -324,17 +333,17 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
 
             case SDL_MOUSEWHEEL: {
                 if (event.wheel.y > 0) {
+                    int dy = fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dx = fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    image_rect.h += dy;
+                    image_rect.w += dx;
                     zoom_level += 1;
                 } else if (event.wheel.y < 0) {
-                    // int dy =
-                    //     fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    // int dx =
-                    //     fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
-                    // image_rect.h -= dy;
-                    // image_rect.w -= dx;
-                    // image_rect.y += dy / 2;
-                    // image_rect.x += dx / 2;
-                    zoom_level -=1;
+                    int dy = fmax(image_rect.h * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    int dx = fmax(image_rect.w * MOUSE_ZOOM_RATE, MIN_VIEW_SIZE);
+                    image_rect.h -= dy;
+                    image_rect.w -= dx;
+                    zoom_level -= 1;
                 }
             } break;
 
@@ -347,55 +356,47 @@ static int sdl_ui(BMP_file *bmp, U32Vec *palette) {
         SDL_RenderClear(renderer);
 
         // render the working area
-        SDL_SetRenderDrawColor(renderer, 0x24, 0x24, 0x24, 255);
-        SDL_RenderFillRect(renderer,
-                           &(SDL_Rect){UI_MARGIN_LEFT, 0,
-                                       WINDOW_WIDTH - UI_MARGIN_LEFT,
-                                       WINDOW_HEIGHT - UI_MARGIN_BOTTOM});
+        SDL_SetRenderDrawColor(renderer, 0x33, 0x33, 0x33, 255);
+        SDL_RenderFillRect(renderer, &(SDL_Rect){0, 0, WINDOW_WIDTH, WINDOW_HEIGHT});
 
         // render the background pattern
-        int xstart = -140;
-        int ystart = -100;
-        int bg_size = 240;
-        for (int y = ystart; y < WINDOW_HEIGHT; y += bg_size) {
-            for (int x = xstart; x < WINDOW_WIDTH; x += bg_size) {
-                SDL_RenderCopy(renderer, bg_texture, NULL,
-                               &(SDL_Rect){x, y, bg_size, bg_size});
-            }
-        }
+        // const int xstart = -140;
+        // const int ystart = -100;
+        // const int bg_size = 240;
+        // for (int y = ystart; y < WINDOW_HEIGHT; y += bg_size) {
+        //     for (int x = xstart; x < WINDOW_WIDTH; x += bg_size) {
+        //         SDL_RenderCopy(renderer, bg_texture, NULL,
+        //                        &(SDL_Rect){x, y, bg_size, bg_size});
+        //     }
+        // }
 
+        // render the working image's shadow
+        const int shadowoff = 1;
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderFillRect(renderer, &(SDL_Rect){image_rect.x + shadowoff, image_rect.y + shadowoff, image_rect.w + shadowoff, image_rect.h + shadowoff});
 
         // render the working image
-        int zoom_dy = image_rect.h * MOUSE_ZOOM_RATE * zoom_level;
-        int zoom_dx = image_rect.w * MOUSE_ZOOM_RATE * zoom_level;
         SDL_RenderCopy(renderer, image_texture, NULL,
-                       &(SDL_Rect){image_rect.x,
-                                   image_rect.y,
-                                   image_rect.w + zoom_dx,
-                                   image_rect.h + zoom_dy});
+                       &(SDL_Rect){image_rect.x, image_rect.y, image_rect.w, image_rect.h});
 
         // render the ui
-        SDL_SetRenderDrawColor(renderer, 0x80, 0x00, 0X00, 255);
-        SDL_RenderFillRect(
-            renderer,
-            &(SDL_Rect){0, 0, BUTTON_SIZE + BUTTON_MARGIN, WINDOW_HEIGHT});
         for (int i = 0; i < NUM_HORIZ_BUTTONS; ++i) {
             ImpButton *button = horiz_button_bar[i];
-            SDL_Texture *button_txt =
-                button->pressed
-                    ? SDL_CreateTextureFromSurface(renderer, button->clicked)
-                    : SDL_CreateTextureFromSurface(renderer, button->surface);
+            SDL_Texture *button_txt = button->pressed
+                                          ? SDL_CreateTextureFromSurface(renderer, button->clicked)
+                                          : SDL_CreateTextureFromSurface(renderer, button->surface);
 
-            SDL_RenderCopy(
-                renderer, button_txt, NULL,
-                &(SDL_Rect){button->x, button->y, button->w, button->h});
+            SDL_RenderCopy(renderer, button_txt, NULL,
+                           &(SDL_Rect){button->x, button->y, button->w, button->h});
 
             // print transparent overlay over disabled buttons
             if (button->task == IMP_DISABLED) {
                 SDL_SetRenderDrawColor(renderer, 0x01, 0x01, 0x01, 200);
-                SDL_RenderFillRect(renderer, &(SDL_Rect){button->x, button->y,
-                                                         button->w, button->h});
+                SDL_RenderFillRect(renderer,
+                                   &(SDL_Rect){button->x, button->y, button->w, button->h});
             }
+
+            SDL_DestroyTexture(button_txt);
         }
 
         SDL_RenderPresent(renderer);

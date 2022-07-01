@@ -12,6 +12,7 @@ typedef enum {
     IMP_INVERT,
     IMP_GRAYSCALE,
     IMP_UNIFORM_NOISE,
+    IMP_HORIZ_FLIP,
 } ImpButtonTask;
 
 /**
