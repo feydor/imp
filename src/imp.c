@@ -1,5 +1,5 @@
 #include "imp.h"
-#include "button_bar.h"
+#include "ui/button_bar.h"
 #include "layer.h"
 #include <assert.h>
 #include <stdbool.h>
@@ -11,10 +11,6 @@ typedef enum {
     IMP_CURSOR,
     IMP_PENCIL,
 } ImpCursorMode;
-
-typedef enum {
-    IMP_NORMAL_EXIT = 1,
-} ImpRetCode;
 
 typedef struct Imp {
     SDL_Renderer *renderer;
@@ -95,9 +91,9 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
 int imp_event(Imp *imp, SDL_Event *e) {
     (void)imp;
     switch (e->type) {
-        case SDL_QUIT: return IMP_NORMAL_EXIT;
+        case SDL_QUIT: return 0;
         case SDL_KEYDOWN: {
-            if (e->key.keysym.sym == SDLK_ESCAPE) return IMP_NORMAL_EXIT;
+            if (e->key.keysym.sym == SDLK_ESCAPE) return 0;
         } break;
 
         case SDL_MOUSEBUTTONDOWN: {
@@ -134,7 +130,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
         } break;
     }
 
-    return 0;
+    return 1;
 }
 
 
@@ -173,53 +169,4 @@ void imp_render(Imp *imp, SDL_Window *window) {
         imp_buttonmenu_render(imp->renderer, imp->button_menus[i]);
     for (int i = 0; i < imp->n_layers; ++i)
         imp_layer_render(imp->renderer, &imp->canvas, imp->layers[i]);
-}
-
-
-static void imp_print(ImpRetCode ret) {
-    char message[69];
-    switch (ret) {
-    case IMP_NORMAL_EXIT: sprintf(message, "Exiting imp succesfully: %d\n", ret); break;
-    }
-    puts(message);
-}
-
-
-int main(void) {
-    SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED, DEFAULT_WINDOW_W,
-        DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
-        SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-    
-    if (!renderer) {
-        exit(fprintf(stderr, "Could not create SDL Renderer\n"));
-    }
-
-    Imp *imp = create_imp(renderer, window);
-    if (!imp) {
-        exit(fprintf(stderr, "imp was NULL\n"));
-    }
-
-    SDL_Event e;
-
-    float dt = 1000.0f / 60.0f;
-    while (1) {
-        uint64_t t0 = SDL_GetTicks64();
-
-        while (SDL_PollEvent(&e)) {
-            int ret_code;
-            if ((ret_code = imp_event(imp, &e)) != 0) {
-                imp_print(ret_code);
-                exit(ret_code);
-            }
-        }
-
-        imp_update(imp, dt);
-        imp_render(imp, window);
-        SDL_RenderPresent(renderer);
-
-        uint64_t t1 = SDL_GetTicks64();
-        SDL_Delay(MAX(10, dt - (t1 - t0)));
-    }
 }

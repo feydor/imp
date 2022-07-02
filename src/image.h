@@ -1,6 +1,8 @@
 /* image.c - image/buffer processing algorithms */
 #ifndef IMAGE_H
 #define IMAGE_H
+#include <stdint.h>
+#include <stddef.h>
 
 typedef unsigned char uchar;
 
