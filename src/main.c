@@ -43,6 +43,7 @@ static int sdl_ui(BMP_file *bmp) {
         DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
         SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     
     if (!renderer) {
         exit(fprintf(stderr, "Could not create SDL Renderer\n"));

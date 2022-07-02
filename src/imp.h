@@ -8,12 +8,24 @@
 typedef uint32_t u32;
 
 typedef struct Imp Imp;
+typedef enum ImpCursorMode ImpCursorMode;
+
+typedef enum ImpCursorMode {
+    IMP_CURSOR,
+    IMP_PENCIL,
+} ImpCursorMode;
 
 typedef struct  {
     int x, y, w, h;
     float dw, dh;
     SDL_Texture *texture;
 } ImpCanvas;
+
+typedef struct {
+    int x, y;
+    ImpCursorMode mode;
+    bool pressed;
+} ImpCursor;
 
 Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture);
 int imp_event(Imp *imp, SDL_Event *e);

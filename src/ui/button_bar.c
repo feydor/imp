@@ -5,10 +5,12 @@
 
 #define DEFAULT_BUTTON_W 64
 #define DEFAULT_BUTTON_H 64
+typedef uint8_t u8;
 
 typedef struct ImpButton {
     SDL_Texture *texture;
     int w, h;
+    bool clicked;
 } ImpButton;
 
 typedef struct ImpButtonMenu {
@@ -64,6 +66,7 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
         button->texture = text;
         button->w = DEFAULT_BUTTON_W;
         button->h = DEFAULT_BUTTON_H;
+        button->clicked = false;
         menu->buttons[i] = button;
 
         SDL_FreeSurface(surf);
@@ -98,7 +101,69 @@ void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
             button->w,
             button->h };
         SDL_RenderCopy(renderer, button->texture, NULL, &rect);
+
+        if (button->clicked) {
+            u8 r, g, b, a;
+            SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255/2);
+            SDL_RenderFillRect(renderer, &rect);
+            SDL_SetRenderDrawColor(renderer, r, g, b, a);
+        }
+
         xoff += dx;
         yoff += dy;
+    }
+}
+
+static bool imp_cursor_over_buttonmenu(ImpButtonMenu *menu, ImpCursor *cursor) {
+    return SDL_HasIntersection(&menu->rect, &(SDL_Rect){cursor->x, cursor->y, 1, 1});
+}
+
+static bool imp_cursor_over_button(SDL_Rect *button_rect, ImpCursor *cursor) {
+    return SDL_HasIntersection(button_rect, &(SDL_Rect){cursor->x, cursor->y, 1, 1});
+}
+
+void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor) {
+    switch (e->type) {
+    case SDL_MOUSEBUTTONDOWN: {
+        if (imp_cursor_over_buttonmenu(menu, cursor)) {
+            int dx = 0, dy = 0;
+            if (menu->orientation == IMP_HORIZ) {
+                if (menu->direction == IMP_RIGHTWARDS) {
+                    dx = DEFAULT_BUTTON_W;
+                } else {
+                    dx = -DEFAULT_BUTTON_W;
+                }
+            } else {
+                if (menu->direction == IMP_DOWNWARDS) {
+                    dy = DEFAULT_BUTTON_H;
+                } else {
+                    dy = -DEFAULT_BUTTON_H;
+                }
+            }
+
+            int xoff = 0, yoff = 0;
+            for (int i = 0; i < menu->n; ++i) {
+                SDL_Rect button_rect = {menu->rect.x + xoff,
+                                        menu->rect.y + yoff,
+                                        DEFAULT_BUTTON_W,
+                                        DEFAULT_BUTTON_H };
+                if (imp_cursor_over_button(&button_rect, cursor)) {
+                    menu->buttons[i]->clicked = true;
+                    // TODO: mouse event dispatch?
+                    printf("clicked button @ (%d,%d)\n", menu->rect.x+xoff, menu->rect.y+yoff);
+                }
+
+                xoff += dx;
+                yoff += dy;
+            }
+        }
+    } break;
+
+    case SDL_MOUSEBUTTONUP: {
+        for (int i = 0; i < menu->n; ++i) {
+            menu->buttons[i]->clicked = false;
+        }
+    } break;
     }
 }

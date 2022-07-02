@@ -21,4 +21,5 @@ typedef enum {
 ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int N,
     ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction);
 void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu);
+void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor);
 #endif

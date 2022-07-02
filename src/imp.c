@@ -7,22 +7,13 @@
 #include <string.h>
 #define MAX(a, b) (a > b ? a : b)
 
-typedef enum {
-    IMP_CURSOR,
-    IMP_PENCIL,
-} ImpCursorMode;
-
 typedef struct Imp {
     SDL_Renderer *renderer;
     SDL_Window *window;
     u32 color;
     int nzoom;
     ImpCanvas canvas;
-    struct Cursor {
-        int x, y;
-        ImpCursorMode mode;
-        bool pressed;
-    } cursor;
+    ImpCursor cursor;
 
     ImpButtonMenu **button_menus;
     int n_button_menus;
@@ -97,29 +88,9 @@ int imp_event(Imp *imp, SDL_Event *e) {
             if (e->key.keysym.sym == SDLK_ESCAPE) return 0;
         } break;
 
-        case SDL_MOUSEBUTTONDOWN: {
-        switch (e->button.button) {
-        case SDL_BUTTON_LEFT: {
-            // check these things in order:
-            // is mouse over a button, then run its task
-            // is mouse over a layer, then run a task based on the current mouse mode
-            // is mouse over canvas, then run current mouse mode over canvas
-            // otherwise do nothing
-
-            // check all buttons, if clicked
-            // fire that buttons task
-            // if (imp->buttons.mouse_over(imp->mouse)) {
-            //     // TODO
-            // } else if (imp->layers.mouse_over(imp->mouse)) {
-
-            // } else if (imp->canvas.mouse_over(imp->mouse)) {
-            //    // TODO
-            // }
-            }
-        } break;
-        case SDL_BUTTON_RIGHT: {
-            // TODO
-        } break;
+        case SDL_MOUSEMOTION: {
+            imp->cursor.x = e->button.x;
+            imp->cursor.y = e->button.y;
         } break;
 
         case SDL_MOUSEWHEEL: {
@@ -131,6 +102,9 @@ int imp_event(Imp *imp, SDL_Event *e) {
         } break;
     }
 
+
+    imp_buttonmenu_event(imp->button_menus[0], e, &imp->cursor);
+    imp_buttonmenu_event(imp->button_menus[1], e, &imp->cursor);
     return 1;
 }
 
