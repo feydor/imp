@@ -15,7 +15,7 @@ typedef struct  {
     SDL_Texture *texture;
 } ImpCanvas;
 
-Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window);
+Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture);
 int imp_event(Imp *imp, SDL_Event *e);
 void imp_update(Imp *imp, float dt);
 void imp_render(Imp *imp, SDL_Window *window);

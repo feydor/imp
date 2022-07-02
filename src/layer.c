@@ -32,8 +32,8 @@ void imp_layer_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayer *l) {
             l->rect.w + canvas->dw,
             l->rect.h + canvas->dh };
         // TODO: eventually switch this to render the layer's texture
-        // SDL_RenderCopy(renderer, l->texture, NULL, &l->rect);
-        SDL_RenderDrawRect(renderer, &rect);
+        SDL_RenderCopy(renderer, l->texture, NULL, &rect);
+        // SDL_RenderDrawRect(renderer, &rect);
         SDL_SetRenderDrawColor(renderer, r, g, b, a);
     }
 }

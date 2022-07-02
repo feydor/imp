@@ -39,7 +39,7 @@ typedef struct Imp {
 #define N_BUTTON_VERT 2
 #define N_BUTTON_HORIZ 4
 
-Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
+Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture) {
     Imp *imp = malloc(sizeof(Imp));
     if (!imp) {
         return NULL;
@@ -81,7 +81,8 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
     }
     for (int i = 0; i < imp->n_layers; ++i) {
         imp->layers[i] = create_imp_layer(
-            (SDL_Rect){ imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h}, NULL);
+            (SDL_Rect){imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h},
+            layer0_texture);
     }
 
     return imp;
@@ -156,17 +157,17 @@ void imp_render(Imp *imp, SDL_Window *window) {
 
     // render canvas
     SDL_SetRenderDrawColor(imp->renderer, 0xFF, 0xFF, 0xFF, 255);
-
     SDL_Rect canvas_rect = {
         imp->canvas.x,
         imp->canvas.y,
         fmax(imp->canvas.w + imp->canvas.dw, 0),
         fmax(imp->canvas.h + imp->canvas.dh, 0) };
     SDL_RenderFillRect(imp->renderer, &canvas_rect);
+    for (int i = 0; i < imp->n_layers; ++i)
+        imp_layer_render(imp->renderer, &imp->canvas, imp->layers[i]);
 
     // render ui
     for (int i = 0; i < imp->n_button_menus; ++i)
         imp_buttonmenu_render(imp->renderer, imp->button_menus[i]);
-    for (int i = 0; i < imp->n_layers; ++i)
-        imp_layer_render(imp->renderer, &imp->canvas, imp->layers[i]);
+
 }

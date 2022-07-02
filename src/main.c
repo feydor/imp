@@ -14,6 +14,29 @@
 
 static void usage() { fprintf(stderr, "%s [input]\n", PROGNAME); }
 
+static SDL_Texture *make_texture_from_bmp(SDL_Renderer *renderer, BMP_file *bmp) {
+    int depth = 24;
+    int pitch = 3 * bmp->w;
+    uint32_t rmask, gmask, bmask;
+    #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+        rmask = 0x0000FF;
+        gmask = 0x00FF00;
+        bmask = 0xFF0000;
+    #else // little endian
+        rmask = 0xFF0000;
+        gmask = 0x00FF00;
+        bmask = 0x0000FF;
+    #endif
+
+    SDL_Surface *surf =
+        SDL_CreateRGBSurfaceFrom(bmp->image_raw, bmp->w, bmp->h, depth, pitch,
+                                 rmask, gmask, bmask, 0);
+    SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
+    return text;
+}
+
+
 static int sdl_ui(BMP_file *bmp) {
     SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED, DEFAULT_WINDOW_W,
@@ -25,7 +48,9 @@ static int sdl_ui(BMP_file *bmp) {
         exit(fprintf(stderr, "Could not create SDL Renderer\n"));
     }
 
-    Imp *imp = create_imp(renderer, window);
+    SDL_Texture *layer0_texture = make_texture_from_bmp(renderer, bmp);
+
+    Imp *imp = create_imp(renderer, window, layer0_texture);
     if (!imp) {
         exit(fprintf(stderr, "imp was NULL\n"));
     }
