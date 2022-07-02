@@ -6,6 +6,19 @@
 #define DEFAULT_BUTTON_W 64
 #define DEFAULT_BUTTON_H 64
 
+typedef struct ImpButton {
+    SDL_Texture *texture;
+    int w, h;
+} ImpButton;
+
+typedef struct ImpButtonMenu {
+    ImpButton **buttons;
+    int n;
+    SDL_Rect rect;
+    ImpButtonMenuOrientation orientation;
+    ImpButtonMenuDirection direction;
+} ImpButtonMenu;
+
 ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int N,
         ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction) {
 
@@ -59,7 +72,7 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
     return menu;
 }
 
-void imp_buttonmenu_render(Imp *imp, ImpButtonMenu *menu) {
+void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
     int dx = 0, dy = 0;
     int gap = 2;
     if (menu->orientation == IMP_HORIZ) {
@@ -84,7 +97,7 @@ void imp_buttonmenu_render(Imp *imp, ImpButtonMenu *menu) {
             menu->rect.y + yoff,
             button->w,
             button->h };
-        SDL_RenderCopy(imp->renderer, button->texture, NULL, &rect);
+        SDL_RenderCopy(renderer, button->texture, NULL, &rect);
         xoff += dx;
         yoff += dy;
     }

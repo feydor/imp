@@ -1,10 +1,38 @@
 #include "imp.h"
-
+#include "button_bar.h"
+#include "layer.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #define MAX(a, b) (a > b ? a : b)
+
+typedef enum {
+    IMP_CURSOR,
+    IMP_PENCIL,
+} ImpCursorMode;
+
+typedef enum {
+    IMP_NORMAL_EXIT = 1,
+} ImpRetCode;
+
+typedef struct Imp {
+    SDL_Renderer *renderer;
+    SDL_Window *window;
+    u32 color;
+    int nzoom;
+    ImpCanvas canvas;
+    struct Cursor {
+        int x, y;
+        ImpCursorMode mode;
+        bool pressed;
+    } cursor;
+
+    ImpButtonMenu **button_menus;
+    int n_button_menus;
+    ImpLayer **layers;
+    int n_layers;
+} Imp;
 
 #define DEFAULT_CANVAS_H 400
 #define DEFAULT_CANVAS_W 600
@@ -36,6 +64,8 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
     imp->canvas.y = h / 2 - DEFAULT_CANVAS_H / 2;
     imp->canvas.w = DEFAULT_CANVAS_W;
     imp->canvas.h = DEFAULT_CANVAS_H;
+    imp->canvas.dw = 0;
+    imp->canvas.dh = 0;
 
     imp->n_button_menus = DEFAULT_N_BUTTON_MENUS;
     imp->button_menus = malloc(sizeof(ImpButtonMenu *) * imp->n_button_menus);
@@ -55,7 +85,7 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
     }
     for (int i = 0; i < imp->n_layers; ++i) {
         imp->layers[i] = create_imp_layer(
-            (SDL_Rect){ imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h});
+            (SDL_Rect){ imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h}, NULL);
     }
 
     return imp;
@@ -69,6 +99,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
         case SDL_KEYDOWN: {
             if (e->key.keysym.sym == SDLK_ESCAPE) return IMP_NORMAL_EXIT;
         } break;
+
         case SDL_MOUSEBUTTONDOWN: {
         switch (e->button.button) {
         case SDL_BUTTON_LEFT: {
@@ -93,6 +124,14 @@ int imp_event(Imp *imp, SDL_Event *e) {
             // TODO
         } break;
         } break;
+
+        case SDL_MOUSEWHEEL: {
+            if (e->wheel.y > 0) {
+                imp->nzoom += 1;
+            } else if (e->wheel.y < 0) {
+                imp->nzoom -= 1;
+            }
+        } break;
     }
 
     return 0;
@@ -101,8 +140,12 @@ int imp_event(Imp *imp, SDL_Event *e) {
 
 void imp_update(Imp *imp, float dt) {
     // TODO
-    (void) imp;
     (void) dt;
+    
+    // update canvas dw and dh
+    const float zoom_rate = 0.1f;
+    imp->canvas.dh = imp->nzoom * imp->canvas.h * zoom_rate;
+    imp->canvas.dw = imp->nzoom * imp->canvas.w * zoom_rate;
 }
 
 
@@ -117,14 +160,19 @@ void imp_render(Imp *imp, SDL_Window *window) {
 
     // render canvas
     SDL_SetRenderDrawColor(imp->renderer, 0xFF, 0xFF, 0xFF, 255);
-    SDL_Rect canvas_rect = { imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h };
+
+    SDL_Rect canvas_rect = {
+        imp->canvas.x,
+        imp->canvas.y,
+        fmax(imp->canvas.w + imp->canvas.dw, 0),
+        fmax(imp->canvas.h + imp->canvas.dh, 0) };
     SDL_RenderFillRect(imp->renderer, &canvas_rect);
 
     // render ui
     for (int i = 0; i < imp->n_button_menus; ++i)
-        imp_buttonmenu_render(imp, imp->button_menus[i]);
+        imp_buttonmenu_render(imp->renderer, imp->button_menus[i]);
     for (int i = 0; i < imp->n_layers; ++i)
-        imp_layer_render(imp->renderer, imp->layers[i]);
+        imp_layer_render(imp->renderer, &imp->canvas, imp->layers[i]);
 }
 
 
