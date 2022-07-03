@@ -1,6 +1,7 @@
 #include "imp.h"
-#include "ui/button_bar.h"
 #include "layer.h"
+#include "ui/button_bar.h"
+#include "ui/layermenu.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -17,9 +18,7 @@ typedef struct Imp {
 
     ImpButtonMenu **button_menus;
     int n_button_menus;
-    ImpLayer **layers;
-    int n_layers;
-    int selected_layer;
+    ImpLayerMenu *layer_menu;
 } Imp;
 
 #define DEFAULT_CANVAS_H 400
@@ -66,26 +65,15 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->button_menus[1] = create_imp_button_menu(renderer, (SDL_Point){0, h-64},
         N_BUTTON_HORIZ, IMP_HORIZ, IMP_RIGHTWARDS);
 
-    imp->n_layers = DEFAULT_N_LAYERS;
-    imp->layers = malloc(sizeof(ImpLayer *) * imp->n_layers);
-    if (!imp->layers) {
-        return NULL;
-    }
-
-    imp->selected_layer = 0;
-    for (int i = 0; i < imp->n_layers; ++i) {
-        imp->layers[i] = create_imp_layer(
-            (SDL_Rect){imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h},
-            layer0_texture);
-    }
+    int w_wind, h_wind;
+    SDL_GetWindowSize(window, &w_wind, &h_wind);
+    SDL_Rect menu_rect = { w_wind - 100, h_wind - 50, 100, 50};
+    SDL_Rect layer0_rect = { imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h };
+    imp->layer_menu = create_imp_layermenu(menu_rect, layer0_rect, layer0_texture);
 
     return imp;
 }
 
-static bool imp_cursor_over_layer(ImpLayer *l, ImpCursor *cursor) {
-    return SDL_HasIntersection(&(SDL_Rect){ cursor->x, cursor->y, 1, 1 },
-                               &(SDL_Rect){ l->rect.x, l->rect.y, l->rect.w, l->rect.h });
-}
 
 int imp_event(Imp *imp, SDL_Event *e) {
     (void)imp;
@@ -100,7 +88,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
             imp->cursor.y = e->button.y;
 
             if (imp->cursor.mode == IMP_CURSOR && imp->cursor.scroll_locked) {
-                   imp_layer_cursor_scroll_update(imp->layers[imp->selected_layer],
+                   imp_layer_cursor_scroll_update(imp->layer_menu->layers[imp->layer_menu->selected_layer],
                         imp->cursor.x, imp->cursor.y);
             }
         } break;
@@ -114,10 +102,10 @@ int imp_event(Imp *imp, SDL_Event *e) {
         } break;
 
         case SDL_MOUSEBUTTONDOWN: {
-            if (imp_cursor_over_layer(imp->layers[imp->selected_layer], &imp->cursor)) {
+            if (imp_cursor_over_layer(imp->layer_menu->layers[imp->layer_menu->selected_layer], &imp->cursor)) {
                 if (imp->cursor.mode == IMP_CURSOR) {
                     imp->cursor.scroll_locked = true;
-                    imp_layer_cursor_scroll_start(imp->layers[imp->selected_layer],
+                    imp_layer_cursor_scroll_start(imp->layer_menu->layers[imp->layer_menu->selected_layer],
                         imp->cursor.x, imp->cursor.y);
                 }
             }
@@ -165,11 +153,11 @@ void imp_render(Imp *imp, SDL_Window *window) {
         fmax(imp->canvas.w + imp->canvas.dw, 0),
         fmax(imp->canvas.h + imp->canvas.dh, 0) };
     SDL_RenderFillRect(imp->renderer, &canvas_rect);
-    for (int i = 0; i < imp->n_layers; ++i)
-        imp_layer_render(imp->renderer, &imp->canvas, imp->layers[i]);
+
+    // render layers + menu ui
+    imp_layermenu_render(imp->renderer, &imp->canvas, imp->layer_menu);
 
     // render ui
     for (int i = 0; i < imp->n_button_menus; ++i)
         imp_buttonmenu_render(imp->renderer, imp->button_menus[i]);
-
 }

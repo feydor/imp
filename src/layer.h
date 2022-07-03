@@ -14,6 +14,7 @@ typedef struct ImpLayer {
 } ImpLayer;
 
 ImpLayer *create_imp_layer(SDL_Rect r, SDL_Texture *t);
+bool imp_cursor_over_layer(ImpLayer *l, ImpCursor *cursor);
 void imp_layer_cursor_scroll_update(ImpLayer *l, int x, int y);
 void imp_layer_cursor_scroll_start(ImpLayer *l, int x, int y);
 void imp_layer_render(SDL_Renderer *r, ImpCanvas *c, ImpLayer *l);
