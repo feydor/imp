@@ -88,8 +88,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
             imp->cursor.y = e->button.y;
 
             if (imp->cursor.mode == IMP_CURSOR && imp->cursor.scroll_locked) {
-                   imp_layer_cursor_scroll_update(imp->layer_menu->layers[imp->layer_menu->selected_layer],
-                        imp->cursor.x, imp->cursor.y);
+                imp_layermenu_scroll_update(imp->layer_menu, &imp->cursor);
             }
         } break;
 
@@ -102,11 +101,10 @@ int imp_event(Imp *imp, SDL_Event *e) {
         } break;
 
         case SDL_MOUSEBUTTONDOWN: {
-            if (imp_cursor_over_layer(imp->layer_menu->layers[imp->layer_menu->selected_layer], &imp->cursor)) {
+            if (imp_cursor_over_layer(imp->layer_menu, &imp->cursor)) {
                 if (imp->cursor.mode == IMP_CURSOR) {
                     imp->cursor.scroll_locked = true;
-                    imp_layer_cursor_scroll_start(imp->layer_menu->layers[imp->layer_menu->selected_layer],
-                        imp->cursor.x, imp->cursor.y);
+                    imp_layermenu_scroll_start(imp->layer_menu, &imp->cursor);
                 }
             }
         } break;

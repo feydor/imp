@@ -26,6 +26,20 @@ ImpLayerMenu *create_imp_layermenu(SDL_Rect menu_rect, SDL_Rect init_layer_rect,
     return menu;
 }
 
+bool imp_cursor_over_layer(ImpLayerMenu *lmenu, ImpCursor *cursor) {
+    ImpLayer *l = lmenu->layers[lmenu->selected_layer];
+    return SDL_HasIntersection(&(SDL_Rect){ cursor->x, cursor->y, 1, 1 },
+                               &(SDL_Rect){ l->rect.x, l->rect.y, l->rect.w, l->rect.h });
+}
+
+void imp_layermenu_scroll_update(ImpLayerMenu *lmenu, ImpCursor *cursor) {
+    imp_layer_scroll_update(lmenu->layers[lmenu->selected_layer], cursor->x, cursor->y);
+}
+
+void imp_layermenu_scroll_start(ImpLayerMenu *lmenu, ImpCursor *cursor) {
+    imp_layer_scroll_start(lmenu->layers[lmenu->selected_layer], cursor->x, cursor->y);
+}
+
 void imp_layermenu_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayerMenu *menu) {
     // first render the layers themselves, then the ui menu
     for (int i = 0; i < menu->n_layers; ++i)

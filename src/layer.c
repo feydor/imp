@@ -15,17 +15,12 @@ ImpLayer *create_imp_layer(SDL_Rect rect, SDL_Texture *t) {
     return l;
 }
 
-bool imp_cursor_over_layer(ImpLayer *l, ImpCursor *cursor) {
-    return SDL_HasIntersection(&(SDL_Rect){ cursor->x, cursor->y, 1, 1 },
-                               &(SDL_Rect){ l->rect.x, l->rect.y, l->rect.w, l->rect.h });
-}
-
-void imp_layer_cursor_scroll_update(ImpLayer *l, int x, int y) {
+void imp_layer_scroll_update(ImpLayer *l, int x, int y) {
     l->next.x = x - l->rel_click_dist.x;
     l->next.y = y - l->rel_click_dist.y;
 }
 
-void imp_layer_cursor_scroll_start(ImpLayer *l, int x, int y) {
+void imp_layer_scroll_start(ImpLayer *l, int x, int y) {
     l->rel_click_dist.x = x - l->next.x;
     l->rel_click_dist.y = y - l->next.y;
 }
