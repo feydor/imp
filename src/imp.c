@@ -69,7 +69,7 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     SDL_GetWindowSize(window, &w_wind, &h_wind);
     SDL_Rect menu_rect = { w_wind - 100, h_wind - 50, 100, 50};
     SDL_Rect layer0_rect = { imp->canvas.x, imp->canvas.y, imp->canvas.w, imp->canvas.h };
-    imp->layer_menu = create_imp_layermenu(menu_rect, layer0_rect, layer0_texture);
+    imp->layer_menu = create_imp_layermenu(renderer, menu_rect, layer0_rect, layer0_texture);
 
     return imp;
 }
@@ -119,6 +119,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
 
     imp_buttonmenu_event(imp->button_menus[0], e, &imp->cursor);
     imp_buttonmenu_event(imp->button_menus[1], e, &imp->cursor);
+    imp_layermenu_event(imp->renderer, imp->layer_menu, e, &imp->cursor);
     return 1;
 }
 
