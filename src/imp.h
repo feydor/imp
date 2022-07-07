@@ -24,7 +24,9 @@ typedef struct  {
 typedef struct {
     int x, y;
     ImpCursorMode mode;
+    u32 color;
     bool scroll_locked;
+    bool pencil_locked;
 } ImpCursor;
 
 Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture);

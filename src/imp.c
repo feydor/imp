@@ -29,6 +29,7 @@ typedef struct Imp {
 #define DEFAULT_N_BUTTON_MENUS 2
 #define N_BUTTON_VERT 2
 #define N_BUTTON_HORIZ 4
+#define DEFAULT_PENCIL_COLOR 0xFF0000FF
 
 Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture) {
     Imp *imp = malloc(sizeof(Imp));
@@ -42,7 +43,7 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->nzoom = 0;
 
     imp->cursor.x = imp->cursor.y = 0;
-    imp->cursor.mode = IMP_CURSOR;
+    imp->cursor.mode = IMP_PENCIL;
     imp->cursor.scroll_locked = false;
 
     int w, h;
@@ -53,6 +54,8 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->canvas.h = DEFAULT_CANVAS_H;
     imp->canvas.dw = 0;
     imp->canvas.dh = 0;
+    imp->cursor.pencil_locked = false;
+    imp->cursor.color = DEFAULT_PENCIL_COLOR;
 
     imp->n_button_menus = DEFAULT_N_BUTTON_MENUS;
     imp->button_menus = malloc(sizeof(ImpButtonMenu *) * imp->n_button_menus);

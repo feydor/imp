@@ -43,10 +43,10 @@ ImpLayerMenu *create_imp_layermenu(SDL_Renderer *renderer, SDL_Rect menu_rect, S
 
 static void imp_layermenu_add_default_layer(SDL_Renderer *renderer, ImpLayerMenu *menu) {
     menu->layers = realloc(menu->layers, sizeof(ImpLayer *) * ++menu->n_layers);
-    SDL_Surface *surf = SDL_CreateRGBSurface(0, menu->canvas.w, menu->canvas.h, 32, 0, 0, 0, 255);
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
+
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+        SDL_TEXTUREACCESS_STREAMING, menu->canvas.w, menu->canvas.w);
     menu->layers[++menu->selected_layer] = create_imp_layer(menu->canvas, texture);
-    SDL_FreeSurface(surf);
 }
 
 static void imp_layermenu_delete_selected_layer(ImpLayerMenu *menu) {
@@ -78,13 +78,18 @@ void imp_layermenu_scroll_start(ImpLayerMenu *lmenu, ImpCursor *cursor) {
 void imp_layermenu_event(SDL_Renderer *renderer, ImpLayerMenu *menu, SDL_Event *e, ImpCursor *cursor) {
     SDL_Rect cursor_rect = { cursor->x, cursor->y, 1, 1 };
     switch (e->type) {
-        case SDL_MOUSEBUTTONDOWN: {
-            if (SDL_HasIntersection(&cursor_rect, &menu->plus_rect)) {
-                imp_layermenu_add_default_layer(renderer, menu);
-            } else if (SDL_HasIntersection(&cursor_rect, &menu->minus_rect)) {
-                imp_layermenu_delete_selected_layer(menu);
-            }
-        } break;
+    case SDL_MOUSEBUTTONDOWN: {
+        if (SDL_HasIntersection(&cursor_rect, &menu->plus_rect)) {
+            imp_layermenu_add_default_layer(renderer, menu);
+        } else if (SDL_HasIntersection(&cursor_rect, &menu->minus_rect)) {
+            imp_layermenu_delete_selected_layer(menu);
+        }
+    } break;
+    }
+
+    for (int i = 0; i < menu->n_layers; ++i) {
+        ImpLayer *l = menu->layers[i];
+        imp_layer_event(l, e, cursor);
     }
 }
 

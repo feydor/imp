@@ -25,11 +25,50 @@ void imp_layer_scroll_start(ImpLayer *l, int x, int y) {
     l->rel_click_dist.y = y - l->next.y;
 }
 
+void imp_layer_event(ImpLayer *l, SDL_Event *e, ImpCursor *cursor) {
+    SDL_Rect cursor_rect = { cursor->x, cursor->y, 1, 1 };
+    switch (e->type) {
+    case SDL_MOUSEBUTTONDOWN: {
+        if (SDL_HasIntersection(&l->rect, &cursor_rect)) {
+            if (cursor->mode == IMP_PENCIL) {
+                cursor->pencil_locked = true;
+            }
+        }
+    } break;
+
+    case SDL_MOUSEMOTION: {
+        if (cursor->pencil_locked && cursor->mode == IMP_PENCIL && SDL_HasIntersection(&l->rect, &cursor_rect)) {
+            float aspect_ratio = (float)l->rect.w / l->rect.h;
+            int ybuffer = 1, xbuffer = 1;
+            int yrel = (cursor->y - l->rect.y + ybuffer) * aspect_ratio;
+            // TODO: adjustable pencil size (currently 4x4 pixel)
+            SDL_Rect edit_rect = { cursor->x - l->rect.x + xbuffer, yrel, 4, 4*aspect_ratio };
+            
+            void *raw_data;
+            int pitch;
+            SDL_LockTexture(l->texture, &edit_rect, &raw_data, &pitch);
+
+            u32 *pixels = (u32 *)raw_data;
+            int npixels = (pitch / 4) * edit_rect.h;
+            for (int i = 0; i < npixels; ++i) {
+                pixels[i] = cursor->color;
+            }
+            SDL_UnlockTexture(l->texture);
+            raw_data = NULL;
+        }
+    } break;
+
+    case SDL_MOUSEBUTTONUP: {
+        if (cursor->mode == IMP_PENCIL) {
+            cursor->pencil_locked = false;
+        }
+    } break;
+    }
+}
+
+
 void imp_layer_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayer *l) {
     if (l->visible) {
-        uc r, g, b, a;
-        SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0xFF, 255);
         SDL_Rect rect = {
             l->next.x,
             l->next.y,
@@ -37,7 +76,5 @@ void imp_layer_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayer *l) {
             l->rect.h + canvas->dh
         };
         SDL_RenderCopy(renderer, l->texture, NULL, &rect);
-        // SDL_RenderDrawRect(renderer, &rect);
-        SDL_SetRenderDrawColor(renderer, r, g, b, a);
     }
 }
