@@ -1,4 +1,5 @@
 #include "layermenu.h"
+#include <SDL2/SDL_image.h>
 
 #define DEFAULT_N_LAYERS 1
 #define DEFAULT_BUTTON_SIZE 50
@@ -38,6 +39,11 @@ ImpLayerMenu *create_imp_layermenu(SDL_Renderer *renderer, SDL_Rect menu_rect, S
                                    DEFAULT_BUTTON_SIZE,
                                    DEFAULT_BUTTON_SIZE };
 
+    IMG_Init(IMG_INIT_PNG);
+    SDL_Surface *surf = IMG_Load("../res/png/red-stickers.png");
+    menu->unfinished = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
+
     return menu;
 }
 
@@ -66,17 +72,12 @@ bool imp_cursor_over_selected_layer(ImpLayerMenu *lmenu, ImpCursor *cursor) {
                                &l->rect);
 }
 
-void imp_layermenu_event(SDL_Renderer *renderer, ImpLayerMenu *menu, SDL_Event *e, ImpCursor *cursor) {
-    SDL_Rect cursor_rect = { cursor->x, cursor->y, 1, 1 };
+void imp_layermenu_event(ImpLayerMenu *menu, SDL_Event *e, ImpCursor *cursor) {
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
         if (imp_cursor_over_selected_layer(menu, cursor)) {
             cursor->scroll_locked = true;
             imp_layer_scroll_start(menu->layers[menu->selected_layer], cursor->x, cursor->y);
-        } else if (SDL_HasIntersection(&cursor_rect, &menu->plus_rect)) {
-            imp_layermenu_add_default_layer(renderer, menu);
-        } else if (SDL_HasIntersection(&cursor_rect, &menu->minus_rect)) {
-            imp_layermenu_delete_selected_layer(menu);
         }
     } break;
 
@@ -122,11 +123,14 @@ void imp_layermenu_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayerMen
         SDL_RenderFillRect(renderer, &dest);
 
         if (i == menu->selected_layer) {
-            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
             SDL_RenderFillRect(renderer, &dest);
-            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
         }
     }
+
+    SDL_Rect menu_rect = (SDL_Rect){menu->rect.x, ystart, menu->rect.w, 2 * menu->rect.h};
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255 / 2);
+    SDL_RenderFillRect(renderer, &menu_rect);
+    SDL_RenderCopy(renderer, menu->unfinished, NULL, &menu_rect);
     SDL_SetRenderDrawColor(renderer, r, g, b, a);
 }

@@ -5,4 +5,4 @@ SRC="../src/main.c ../src/vector.c ../src/image.c ../src/system/bmp.c \
 ../src/ui/layermenu.c"
 CFLAGS="-Wall -Wextra -Wshadow -g"
 
-cc $CFLAGS $SRC -I../src -o imp `sdl2-config --cflags --libs` -lm
+cc $CFLAGS $SRC -I../src -o imp `sdl2-config --cflags --libs` -lSDL2_image -lm

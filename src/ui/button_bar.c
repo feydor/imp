@@ -16,6 +16,7 @@ typedef struct ImpButton {
 typedef struct ImpButtonMenu {
     ImpButton **buttons;
     int n;
+    int selected;
     SDL_Rect rect;
     ImpButtonMenuOrientation orientation;
     ImpButtonMenuDirection direction;
@@ -44,6 +45,7 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
     }
 
     menu->n = N;
+    menu->selected = -1;
     menu->rect = (SDL_Rect){ loc.x, loc.y, menu_w, menu_h };
     menu->buttons = malloc(sizeof(ImpButton *) * menu->n);
     if (!menu->buttons) {
@@ -75,6 +77,10 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
     return menu;
 }
 
+void imp_buttonmenu_select(ImpButtonMenu *menu, int i) {
+    menu->selected = i;
+}
+
 void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
     int dx = 0, dy = 0;
     int gap = 2;
@@ -102,13 +108,16 @@ void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
             button->h };
         SDL_RenderCopy(renderer, button->texture, NULL, &rect);
 
+        u8 r, g, b, a;
+        SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
         if (button->clicked) {
-            u8 r, g, b, a;
-            SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255/2);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
             SDL_RenderFillRect(renderer, &rect);
-            SDL_SetRenderDrawColor(renderer, r, g, b, a);
+        } else if (i == menu->selected) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 100);
+            SDL_RenderFillRect(renderer, &rect);
         }
+        SDL_SetRenderDrawColor(renderer, r, g, b, a);
 
         xoff += dx;
         yoff += dy;
@@ -151,7 +160,6 @@ void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor) 
                 if (imp_cursor_over_button(&button_rect, cursor)) {
                     menu->buttons[i]->clicked = true;
                     // TODO: mouse event dispatch?
-                    printf("clicked button @ (%d,%d)\n", menu->rect.x+xoff, menu->rect.y+yoff);
                 }
 
                 xoff += dx;

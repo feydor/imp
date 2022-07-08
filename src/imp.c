@@ -63,6 +63,8 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
 
     imp->button_menus[0] = create_imp_button_menu(renderer, (SDL_Point){0, 0},
         N_BUTTON_VERT, IMP_VERT, IMP_DOWNWARDS);
+    imp_buttonmenu_select(imp->button_menus[0], 0);
+
     imp->button_menus[1] = create_imp_button_menu(renderer, (SDL_Point){0, h-64},
         N_BUTTON_HORIZ, IMP_HORIZ, IMP_RIGHTWARDS);
 
@@ -88,14 +90,6 @@ int imp_event(Imp *imp, SDL_Event *e) {
             imp->cursor.y = e->button.y;
         } break;
 
-        case SDL_MOUSEWHEEL: {
-            if (e->wheel.y > 0) {
-                imp->nzoom += 1;
-            } else if (e->wheel.y < 0) {
-                imp->nzoom -= 1;
-            }
-        } break;
-
         case SDL_MOUSEBUTTONUP: {
             if (imp->cursor.mode == IMP_CURSOR) {
                 imp->cursor.scroll_locked = false;
@@ -106,7 +100,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
 
     imp_buttonmenu_event(imp->button_menus[0], e, &imp->cursor);
     imp_buttonmenu_event(imp->button_menus[1], e, &imp->cursor);
-    imp_layermenu_event(imp->renderer, imp->layer_menu, e, &imp->cursor);
+    imp_layermenu_event(imp->layer_menu, e, &imp->cursor);
     return 1;
 }
 
@@ -132,13 +126,13 @@ void imp_render(Imp *imp, SDL_Window *window) {
     SDL_RenderFillRect(imp->renderer, &win_rect);
 
     // render canvas
-    SDL_SetRenderDrawColor(imp->renderer, 0xFF, 0xFF, 0xFF, 255);
-    SDL_Rect canvas_rect = {
-        imp->canvas.x,
-        imp->canvas.y,
-        fmax(imp->canvas.w + imp->canvas.dw, 0),
-        fmax(imp->canvas.h + imp->canvas.dh, 0) };
-    SDL_RenderFillRect(imp->renderer, &canvas_rect);
+    // SDL_SetRenderDrawColor(imp->renderer, 0xFF, 0xFF, 0xFF, 255);
+    // SDL_Rect canvas_rect = {
+    //     imp->canvas.x,
+    //     imp->canvas.y,
+    //     fmax(imp->canvas.w + imp->canvas.dw, 0),
+    //     fmax(imp->canvas.h + imp->canvas.dh, 0) };
+    // SDL_RenderFillRect(imp->renderer, &canvas_rect);
 
     // render layers + menu ui
     imp_layermenu_render(imp->renderer, &imp->canvas, imp->layer_menu);
