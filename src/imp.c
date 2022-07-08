@@ -20,15 +20,15 @@ typedef struct Imp {
     ImpLayerMenu *layer_menu;
 } Imp;
 
-#define DEFAULT_CANVAS_H 400
-#define DEFAULT_CANVAS_W 600
+#define DEFAULT_CANVAS_H 300
+#define DEFAULT_CANVAS_W 300
 #define DEFAULT_WINDOW_H 600
 #define DEFAULT_WINDOW_W 800
 #define DEFAULT_N_LAYERS 1
 #define DEFAULT_N_BUTTON_MENUS 2
 #define N_BUTTON_VERT 2
 #define N_BUTTON_HORIZ 4
-#define DEFAULT_PENCIL_COLOR 0xFF0000FF
+#define DEFAULT_PENCIL_COLOR 0xFF0000
 
 Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture) {
     Imp *imp = malloc(sizeof(Imp));
@@ -64,6 +64,8 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->button_menus[0] = create_imp_button_menu(renderer, (SDL_Point){0, 0},
         N_BUTTON_VERT, IMP_VERT, IMP_DOWNWARDS);
     imp_buttonmenu_select(imp->button_menus[0], 0);
+    imp_buttonmenu_settask(imp->button_menus[0], 0, IMP_SELECT_CURSOR);
+    imp_buttonmenu_settask(imp->button_menus[0], 1, IMP_SELECT_PENCIL);
 
     imp->button_menus[1] = create_imp_button_menu(renderer, (SDL_Point){0, h-64},
         N_BUTTON_HORIZ, IMP_HORIZ, IMP_RIGHTWARDS);
@@ -100,7 +102,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
 
     imp_buttonmenu_event(imp->button_menus[0], e, &imp->cursor);
     imp_buttonmenu_event(imp->button_menus[1], e, &imp->cursor);
-    imp_layermenu_event(imp->layer_menu, e, &imp->cursor);
+    imp_layermenu_event(imp->layer_menu, imp->window, e, &imp->cursor);
     return 1;
 }
 

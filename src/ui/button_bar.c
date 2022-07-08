@@ -11,6 +11,7 @@ typedef struct ImpButton {
     SDL_Texture *texture;
     int w, h;
     bool clicked;
+    ImpButtonTask task;
 } ImpButton;
 
 typedef struct ImpButtonMenu {
@@ -66,6 +67,7 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
         }
 
         button->texture = text;
+        button->task = IMP_NOTHING;
         button->w = DEFAULT_BUTTON_W;
         button->h = DEFAULT_BUTTON_H;
         button->clicked = false;
@@ -79,6 +81,10 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
 
 void imp_buttonmenu_select(ImpButtonMenu *menu, int i) {
     menu->selected = i;
+}
+
+void imp_buttonmenu_settask(ImpButtonMenu *menu, int i, ImpButtonTask task) {
+    menu->buttons[i]->task = task;
 }
 
 void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
@@ -110,7 +116,7 @@ void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
 
         u8 r, g, b, a;
         SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
-        if (button->clicked) {
+        if (button->clicked && i != menu->selected) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
             SDL_RenderFillRect(renderer, &rect);
         } else if (i == menu->selected) {
@@ -130,6 +136,20 @@ static bool imp_cursor_over_buttonmenu(ImpButtonMenu *menu, ImpCursor *cursor) {
 
 static bool imp_cursor_over_button(SDL_Rect *button_rect, ImpCursor *cursor) {
     return SDL_HasIntersection(button_rect, &(SDL_Rect){cursor->x, cursor->y, 1, 1});
+}
+
+static void imp_buttonmenu_dispatchtask(ImpButtonMenu *menu, ImpButton *b, int i, ImpCursor *cursor) {
+    switch(b->task) {
+    case IMP_SELECT_CURSOR: {
+        cursor->mode = IMP_CURSOR;
+        menu->selected = i;
+    } break;
+    case IMP_SELECT_PENCIL: {
+        cursor->mode = IMP_PENCIL;
+        menu->selected = i;
+    } break;
+    default: printf("button task not implemented.\n"); break;
+    }
 }
 
 void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor) {
@@ -159,7 +179,7 @@ void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor) 
                                         DEFAULT_BUTTON_H };
                 if (imp_cursor_over_button(&button_rect, cursor)) {
                     menu->buttons[i]->clicked = true;
-                    // TODO: mouse event dispatch?
+                    imp_buttonmenu_dispatchtask(menu, menu->buttons[i], i, cursor);
                 }
 
                 xoff += dx;

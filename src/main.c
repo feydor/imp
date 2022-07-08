@@ -31,13 +31,14 @@ static SDL_Texture *make_texture_from_bmp(SDL_Renderer *renderer, BMP_file *bmp)
     SDL_Surface *surf =
         SDL_CreateRGBSurfaceFrom(bmp->image_raw, bmp->w, bmp->h, depth, pitch,
                                  rmask, gmask, bmask, 0);
-    SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, surf);
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
     SDL_FreeSurface(surf);
-    return text;
+    return texture;
 }
 
 
-static int sdl_ui(BMP_file *bmp) {
+static int sdl_ui(char *src) {
     SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED, DEFAULT_WINDOW_W,
         DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
@@ -49,7 +50,20 @@ static int sdl_ui(BMP_file *bmp) {
         exit(fprintf(stderr, "Could not create SDL Renderer\n"));
     }
 
-    SDL_Texture *layer0_texture = make_texture_from_bmp(renderer, bmp);
+    IMG_Init(IMG_INIT_PNG);
+    SDL_Surface *surf = IMG_Load(src);
+    SDL_Surface *formatted = SDL_ConvertSurfaceFormat(surf, SDL_GetWindowPixelFormat(window), 0);
+    SDL_Texture *layer0_texture = SDL_CreateTexture(renderer, SDL_GetWindowPixelFormat(window),
+        SDL_TEXTUREACCESS_STREAMING, formatted->w, formatted->h);
+
+    void *pixels;
+    int wpitch;
+    SDL_LockTexture(layer0_texture, NULL, &pixels, &wpitch);
+    memcpy(pixels, formatted->pixels, formatted->pitch * formatted->h);
+    SDL_UnlockTexture(layer0_texture);
+    SDL_FreeSurface(formatted);
+    SDL_FreeSurface(surf);
+    pixels = NULL;
 
     Imp *imp = create_imp(renderer, window, layer0_texture);
     if (!imp) {
@@ -90,18 +104,13 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    BMP_file bmp;
-    if (BMP_load(&bmp, argv[1]) != 0) {
-        return -1;
-    }
-    BMP_print_dimensions(&bmp);
+    // TODO: BMP_load
 
-    int ret_code = sdl_ui(&bmp);
+    int ret_code = sdl_ui(argv[1]);
     if (ret_code != 0) {
         perror("main");
         return EXIT_FAILURE;
     }
 
-    BMP_free(&bmp);
     return EXIT_SUCCESS;
 }

@@ -39,7 +39,6 @@ ImpLayerMenu *create_imp_layermenu(SDL_Renderer *renderer, SDL_Rect menu_rect, S
                                    DEFAULT_BUTTON_SIZE,
                                    DEFAULT_BUTTON_SIZE };
 
-    IMG_Init(IMG_INIT_PNG);
     SDL_Surface *surf = IMG_Load("../res/png/red-stickers.png");
     menu->unfinished = SDL_CreateTextureFromSurface(renderer, surf);
     SDL_FreeSurface(surf);
@@ -72,7 +71,7 @@ bool imp_cursor_over_selected_layer(ImpLayerMenu *lmenu, ImpCursor *cursor) {
                                &l->rect);
 }
 
-void imp_layermenu_event(ImpLayerMenu *menu, SDL_Event *e, ImpCursor *cursor) {
+void imp_layermenu_event(ImpLayerMenu *menu, SDL_Window *w, SDL_Event *e, ImpCursor *cursor) {
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
         if (imp_cursor_over_selected_layer(menu, cursor)) {
@@ -90,7 +89,7 @@ void imp_layermenu_event(ImpLayerMenu *menu, SDL_Event *e, ImpCursor *cursor) {
 
     for (int i = 0; i < menu->n_layers; ++i) {
         ImpLayer *l = menu->layers[i];
-        imp_layer_event(l, e, cursor);
+        imp_layer_event(l, w, e, cursor);
     }
 }
 
