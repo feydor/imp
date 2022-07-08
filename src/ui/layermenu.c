@@ -57,32 +57,32 @@ static void imp_layermenu_delete_selected_layer(ImpLayerMenu *menu) {
     --menu->selected_layer;
 }
 
-bool imp_cursor_over_layer(ImpLayerMenu *lmenu, ImpCursor *cursor) {
+bool imp_cursor_over_selected_layer(ImpLayerMenu *lmenu, ImpCursor *cursor) {
     if (lmenu->n_layers < 1) {
         return false;
     }
     ImpLayer *l = lmenu->layers[lmenu->selected_layer];
     return SDL_HasIntersection(&(SDL_Rect){ cursor->x, cursor->y, 1, 1 },
-                               &(SDL_Rect){ l->rect.x, l->rect.y, l->rect.w, l->rect.h });
+                               &l->rect);
 }
-
-void imp_layermenu_scroll_update(ImpLayerMenu *lmenu, ImpCursor *cursor) {
-    imp_layer_scroll_update(lmenu->layers[lmenu->selected_layer], cursor->x, cursor->y);
-}
-
-void imp_layermenu_scroll_start(ImpLayerMenu *lmenu, ImpCursor *cursor) {
-    imp_layer_scroll_start(lmenu->layers[lmenu->selected_layer], cursor->x, cursor->y);
-}
-
 
 void imp_layermenu_event(SDL_Renderer *renderer, ImpLayerMenu *menu, SDL_Event *e, ImpCursor *cursor) {
     SDL_Rect cursor_rect = { cursor->x, cursor->y, 1, 1 };
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
-        if (SDL_HasIntersection(&cursor_rect, &menu->plus_rect)) {
+        if (imp_cursor_over_selected_layer(menu, cursor)) {
+            cursor->scroll_locked = true;
+            imp_layer_scroll_start(menu->layers[menu->selected_layer], cursor->x, cursor->y);
+        } else if (SDL_HasIntersection(&cursor_rect, &menu->plus_rect)) {
             imp_layermenu_add_default_layer(renderer, menu);
         } else if (SDL_HasIntersection(&cursor_rect, &menu->minus_rect)) {
             imp_layermenu_delete_selected_layer(menu);
+        }
+    } break;
+
+    case SDL_MOUSEMOTION: {
+        if (cursor->mode == IMP_CURSOR && cursor->scroll_locked) {
+            imp_layer_scroll_update(menu->layers[menu->selected_layer], cursor->x, cursor->y);
         }
     } break;
     }
@@ -94,6 +94,7 @@ void imp_layermenu_event(SDL_Renderer *renderer, ImpLayerMenu *menu, SDL_Event *
 }
 
 
+// TODO: fix layers rendering after delete (specifically after drawing)
 void imp_layermenu_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayerMenu *menu) {
     // first render the layers themselves, then the ui menu
     for (int i = 0; i < menu->n_layers; ++i)

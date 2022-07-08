@@ -11,7 +11,6 @@
 typedef struct Imp {
     SDL_Renderer *renderer;
     SDL_Window *window;
-    u32 color;
     int nzoom;
     ImpCanvas canvas;
     ImpCursor cursor;
@@ -39,12 +38,13 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
 
     imp->renderer = renderer;
     imp->window = window;
-    imp->color = 0xFF0000;
     imp->nzoom = 0;
 
     imp->cursor.x = imp->cursor.y = 0;
-    imp->cursor.mode = IMP_PENCIL;
+    imp->cursor.mode = IMP_CURSOR;
     imp->cursor.scroll_locked = false;
+    imp->cursor.pencil_locked = false;
+    imp->cursor.color = DEFAULT_PENCIL_COLOR;
 
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
@@ -54,8 +54,6 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->canvas.h = DEFAULT_CANVAS_H;
     imp->canvas.dw = 0;
     imp->canvas.dh = 0;
-    imp->cursor.pencil_locked = false;
-    imp->cursor.color = DEFAULT_PENCIL_COLOR;
 
     imp->n_button_menus = DEFAULT_N_BUTTON_MENUS;
     imp->button_menus = malloc(sizeof(ImpButtonMenu *) * imp->n_button_menus);
@@ -79,7 +77,6 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
 
 
 int imp_event(Imp *imp, SDL_Event *e) {
-    (void)imp;
     switch (e->type) {
         case SDL_QUIT: return 0;
         case SDL_KEYDOWN: {
@@ -89,10 +86,6 @@ int imp_event(Imp *imp, SDL_Event *e) {
         case SDL_MOUSEMOTION: {
             imp->cursor.x = e->button.x;
             imp->cursor.y = e->button.y;
-
-            if (imp->cursor.mode == IMP_CURSOR && imp->cursor.scroll_locked) {
-                imp_layermenu_scroll_update(imp->layer_menu, &imp->cursor);
-            }
         } break;
 
         case SDL_MOUSEWHEEL: {
@@ -100,15 +93,6 @@ int imp_event(Imp *imp, SDL_Event *e) {
                 imp->nzoom += 1;
             } else if (e->wheel.y < 0) {
                 imp->nzoom -= 1;
-            }
-        } break;
-
-        case SDL_MOUSEBUTTONDOWN: {
-            if (imp_cursor_over_layer(imp->layer_menu, &imp->cursor)) {
-                if (imp->cursor.mode == IMP_CURSOR) {
-                    imp->cursor.scroll_locked = true;
-                    imp_layermenu_scroll_start(imp->layer_menu, &imp->cursor);
-                }
             }
         } break;
 
