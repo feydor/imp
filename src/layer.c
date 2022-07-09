@@ -44,7 +44,6 @@ void imp_layer_event(ImpLayer *l, SDL_Window *w, SDL_Event *e, ImpCursor *cursor
             int yrel = (cursor->y - l->rect.y + ybuffer) * aspect_ratio;
             // TODO: adjustable pencil size (currently 4x4 pixel)
             SDL_Rect edit_rect = { cursor->x - l->rect.x + xbuffer, yrel, 4, 4*aspect_ratio };
-            printf("(w:%d,h:%d)\n", l->rect.w, l->rect.h);
             
             void *raw_data;
             int pitch;
