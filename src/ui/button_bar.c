@@ -1,5 +1,6 @@
 
 #include "imp.h"
+#include "canvas.h"
 #include "button_bar.h"
 #include <assert.h>
 

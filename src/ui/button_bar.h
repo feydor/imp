@@ -5,6 +5,7 @@
 
 typedef struct ImpButton ImpButton;
 typedef struct ImpButtonMenu ImpButtonMenu;
+typedef struct ImpCursor ImpCursor;
 
 typedef enum {
     IMP_NOTHING,

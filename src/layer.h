@@ -4,6 +4,7 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
 #include "imp.h"
+#include "canvas.h"
 typedef struct ImpLayer {
     SDL_Texture *texture;
     SDL_Rect rect;
