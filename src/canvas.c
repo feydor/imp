@@ -66,12 +66,12 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     }
 
     int w, h;
-    int margin = 20, left_padding = 64, bottom_padding = 64;
+    const int W_RESOLUTION = 1080, H_RESOLUTION = 720;
     SDL_GetWindowSize(window, &w, &h);
-    canvas->x = margin + left_padding;
-    canvas->y = margin;
-    canvas->w = w - 2 * margin - left_padding;
-    canvas->h = h - 2 * margin - bottom_padding;
+    canvas->x = w/2 - W_RESOLUTION/2;
+    canvas->y = h/2 - H_RESOLUTION/2;
+    canvas->w = W_RESOLUTION;
+    canvas->h = H_RESOLUTION;
     canvas->dw = 0;
     canvas->dh = 0;
     u32 format = SDL_GetWindowPixelFormat(window);
@@ -179,5 +179,5 @@ void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c) {
     SDL_RenderCopy(renderer, c->texture, NULL, &canvas_rect);
     SDL_RenderCopy(
         renderer, c->border, NULL,
-        &(SDL_Rect){canvas_rect.x - 6, canvas_rect.y - 6, canvas_rect.w + 12, canvas_rect.h + 12});
+        &(SDL_Rect){canvas_rect.x - 8, canvas_rect.y - 9, canvas_rect.w + 18, canvas_rect.h + 20});
 }

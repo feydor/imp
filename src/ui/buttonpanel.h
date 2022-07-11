@@ -26,8 +26,8 @@ typedef enum {
     IMP_LEFTWARDS,
 } ImpButtonMenuDirection;
 
-ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int N,
-    ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction);
+ImpButtonMenu *create_imp_buttonmenu(SDL_Renderer *renderer, SDL_Point loc, int N, int h_button, int w_button,
+        SDL_Texture *bg, ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction);
 void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu);
 void imp_buttonmenu_select(ImpButtonMenu *menu, int i);
 void imp_buttonmenu_settask(ImpButtonMenu *menu, int i, ImpButtonTask task);

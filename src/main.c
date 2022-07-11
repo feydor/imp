@@ -41,7 +41,7 @@ static SDL_Texture *make_texture_from_bmp(SDL_Renderer *renderer, BMP_file *bmp)
 static int sdl_ui(char *src) {
     SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED, DEFAULT_WINDOW_W,
-        DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED);
+        DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_FULLSCREEN_DESKTOP);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
         SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

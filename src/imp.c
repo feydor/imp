@@ -1,6 +1,6 @@
 #include "imp.h"
 #include "layer.h"
-#include "ui/button_bar.h"
+#include "ui/buttonpanel.h"
 #include "ui/layermenu.h"
 #include "canvas.h"
 #include <assert.h>
@@ -51,16 +51,19 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
         return NULL;
     }
 
-    int w, h;
-    SDL_GetWindowSize(window, &w, &h);
-    imp->button_menus[0] = create_imp_button_menu(renderer, (SDL_Point){0, 0},
-        N_BUTTON_VERT, IMP_VERT, IMP_DOWNWARDS);
+    int gap_between_menu = 24;
+    SDL_Surface *vert_surf = IMG_Load("../res/png/vert-menu-bg.png");
+    SDL_Texture *vert_bg = SDL_CreateTextureFromSurface(renderer, vert_surf);
+    imp->button_menus[0] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x - 48 - gap_between_menu, imp->canvas->y},
+        12, 48, 48, vert_bg, IMP_VERT, IMP_DOWNWARDS);
     imp_buttonmenu_select(imp->button_menus[0], 0);
     imp_buttonmenu_settask(imp->button_menus[0], 0, IMP_SELECT_CURSOR);
     imp_buttonmenu_settask(imp->button_menus[0], 1, IMP_SELECT_PENCIL);
 
-    imp->button_menus[1] = create_imp_button_menu(renderer, (SDL_Point){0, h-64},
-        N_BUTTON_HORIZ, IMP_HORIZ, IMP_RIGHTWARDS);
+    SDL_Surface *horiz_surf = IMG_Load("../res/png/horiz-menu-bg.png");
+    SDL_Texture *horiz_bg = SDL_CreateTextureFromSurface(renderer, horiz_surf);
+    imp->button_menus[1] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x, imp->canvas->y + imp->canvas->h + gap_between_menu},
+        14, 64, 64, horiz_bg, IMP_HORIZ, IMP_RIGHTWARDS);
 
     return imp;
 }

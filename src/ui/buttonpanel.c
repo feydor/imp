@@ -1,7 +1,7 @@
 
 #include "imp.h"
 #include "canvas.h"
-#include "button_bar.h"
+#include "buttonpanel.h"
 #include <assert.h>
 
 #define DEFAULT_BUTTON_W 64
@@ -20,13 +20,14 @@ typedef struct ImpButtonMenu {
     int n;
     int selected;
     SDL_Rect rect;
+    SDL_Texture *bg;
     ImpButtonMenuOrientation orientation;
     ImpButtonMenuDirection direction;
 } ImpButtonMenu;
 
-ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int N,
-        ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction) {
-
+ImpButtonMenu *create_imp_buttonmenu(SDL_Renderer *renderer, SDL_Point loc, int N, int h_button, int w_button,
+        SDL_Texture *bg, ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction) {
+    
     ImpButtonMenu *menu = malloc(sizeof(ImpButtonMenu));
     if (!menu) {
         return NULL;
@@ -37,20 +38,20 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
     int menu_w = 0, menu_h = 0;
     char filename[32];
     if (orientation == IMP_HORIZ) {
-        menu_w = N * DEFAULT_BUTTON_W;
-        menu_h = DEFAULT_BUTTON_H;
+        menu_w = N * w_button;
+        menu_h = h_button;
         sprintf(filename, "horiz-button");
     } else {
-        menu_w = DEFAULT_BUTTON_W;
-        menu_h = N * DEFAULT_BUTTON_H;
+        menu_w = w_button;
+        menu_h = N * h_button;
         sprintf(filename, "vert-button");
     }
 
     menu->n = N;
     menu->selected = -1;
+    menu->bg = bg;
     menu->rect = (SDL_Rect){ loc.x, loc.y, menu_w, menu_h };
-    menu->buttons = malloc(sizeof(ImpButton *) * menu->n);
-    if (!menu->buttons) {
+    if ((menu->buttons = malloc(sizeof(ImpButton *) * menu->n)) == NULL) {
         return NULL;
     }
 
@@ -58,19 +59,22 @@ ImpButtonMenu *create_imp_button_menu(SDL_Renderer *renderer, SDL_Point loc, int
         char path[255];
         sprintf(path, "../res/icons/%s%d.bmp", filename, i);
         SDL_Surface *surf = SDL_LoadBMP(path);
+        SDL_Texture *text = NULL;
         if (!surf) {
             fprintf(stderr, "failed to load texture from file: '%s'\n", path);
+            text = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, w_button, h_button);
+        } else {
+            text = SDL_CreateTextureFromSurface(renderer, surf);
         }
-        SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, surf);
+        
         ImpButton *button = malloc(sizeof(ImpButton));
         if (!button) {
             return NULL;
         }
-
         button->texture = text;
         button->task = IMP_NOTHING;
-        button->w = DEFAULT_BUTTON_W;
-        button->h = DEFAULT_BUTTON_H;
+        button->w = w_button;
+        button->h = h_button;
         button->clicked = false;
         menu->buttons[i] = button;
 
@@ -91,19 +95,22 @@ void imp_buttonmenu_settask(ImpButtonMenu *menu, int i, ImpButtonTask task) {
 void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
     int dx = 0, dy = 0;
     int gap = 2;
+    int w_but = menu->buttons[0]->w, h_but = menu->buttons[0]->h;
     if (menu->orientation == IMP_HORIZ) {
         if (menu->direction == IMP_RIGHTWARDS) {
-            dx = DEFAULT_BUTTON_W + gap;
+            dx = w_but + gap;
         } else {
-            dx = -DEFAULT_BUTTON_W + gap;
+            dx = -w_but + gap;
         }
     } else {
         if (menu->direction == IMP_DOWNWARDS) {
-            dy = DEFAULT_BUTTON_H + gap;
+            dy = h_but + gap;
         } else {
-            dy = -DEFAULT_BUTTON_H + gap;
+            dy = -h_but + gap;
         }
     }
+
+    SDL_RenderCopy(renderer, menu->bg, NULL, &menu->rect);
 
     int xoff = 0, yoff = 0;
     for (int i = 0; i < menu->n; ++i) {
@@ -115,8 +122,6 @@ void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
             button->h };
         SDL_RenderCopy(renderer, button->texture, NULL, &rect);
 
-        u8 r, g, b, a;
-        SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
         if (button->clicked && i != menu->selected) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
             SDL_RenderFillRect(renderer, &rect);
@@ -124,7 +129,6 @@ void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 100);
             SDL_RenderFillRect(renderer, &rect);
         }
-        SDL_SetRenderDrawColor(renderer, r, g, b, a);
 
         xoff += dx;
         yoff += dy;
@@ -158,17 +162,18 @@ void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor) 
     case SDL_MOUSEBUTTONDOWN: {
         if (imp_cursor_over_buttonmenu(menu, cursor)) {
             int dx = 0, dy = 0;
+            int w_but = menu->buttons[0]->w, h_but = menu->buttons[0]->h;
             if (menu->orientation == IMP_HORIZ) {
                 if (menu->direction == IMP_RIGHTWARDS) {
-                    dx = DEFAULT_BUTTON_W;
+                    dx = w_but;
                 } else {
-                    dx = -DEFAULT_BUTTON_W;
+                    dx = -w_but;
                 }
             } else {
                 if (menu->direction == IMP_DOWNWARDS) {
-                    dy = DEFAULT_BUTTON_H;
+                    dy = h_but;
                 } else {
-                    dy = -DEFAULT_BUTTON_H;
+                    dy = -h_but;
                 }
             }
 
@@ -176,8 +181,8 @@ void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor) 
             for (int i = 0; i < menu->n; ++i) {
                 SDL_Rect button_rect = {menu->rect.x + xoff,
                                         menu->rect.y + yoff,
-                                        DEFAULT_BUTTON_W,
-                                        DEFAULT_BUTTON_H };
+                                        menu->buttons[i]->w,
+                                        menu->buttons[i]->h };
                 if (imp_cursor_over_button(&button_rect, cursor)) {
                     menu->buttons[i]->clicked = true;
                     imp_buttonmenu_dispatchtask(menu, menu->buttons[i], i, cursor);
