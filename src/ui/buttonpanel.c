@@ -3,6 +3,7 @@
 #include "canvas.h"
 #include "buttonpanel.h"
 #include <assert.h>
+#include <SDL2/SDL_image.h>
 
 #define DEFAULT_BUTTON_W 64
 #define DEFAULT_BUTTON_H 64
@@ -21,12 +22,13 @@ typedef struct ImpButtonMenu {
     int selected;
     SDL_Rect rect;
     SDL_Texture *bg;
+    int w_bg, h_bg;
     ImpButtonMenuOrientation orientation;
     ImpButtonMenuDirection direction;
 } ImpButtonMenu;
 
 ImpButtonMenu *create_imp_buttonmenu(SDL_Renderer *renderer, SDL_Point loc, int N, int h_button, int w_button,
-        SDL_Texture *bg, ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction) {
+        char *bg_path, ImpButtonMenuOrientation orientation, ImpButtonMenuDirection direction) {
     
     ImpButtonMenu *menu = malloc(sizeof(ImpButtonMenu));
     if (!menu) {
@@ -47,9 +49,18 @@ ImpButtonMenu *create_imp_buttonmenu(SDL_Renderer *renderer, SDL_Point loc, int 
         sprintf(filename, "vert-button");
     }
 
+    SDL_Surface *bg_surf = IMG_Load(bg_path);
+    if (!bg_surf) {
+        fprintf(stderr, "failed to load file: %s", bg_path);
+        menu->w_bg = 0, menu->h_bg = 0;
+    } else {
+        menu->w_bg = bg_surf->w;
+        menu->h_bg = bg_surf->h;
+    }
+
+    menu->bg = SDL_CreateTextureFromSurface(renderer, bg_surf);
     menu->n = N;
     menu->selected = -1;
-    menu->bg = bg;
     menu->rect = (SDL_Rect){ loc.x, loc.y, menu_w, menu_h };
     if ((menu->buttons = malloc(sizeof(ImpButton *) * menu->n)) == NULL) {
         return NULL;
@@ -94,7 +105,7 @@ void imp_buttonmenu_settask(ImpButtonMenu *menu, int i, ImpButtonTask task) {
 
 void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
     int dx = 0, dy = 0;
-    int gap = 2;
+    int gap = 5;
     int w_but = menu->buttons[0]->w, h_but = menu->buttons[0]->h;
     if (menu->orientation == IMP_HORIZ) {
         if (menu->direction == IMP_RIGHTWARDS) {
@@ -110,9 +121,15 @@ void imp_buttonmenu_render(SDL_Renderer *renderer, ImpButtonMenu *menu) {
         }
     }
 
-    SDL_RenderCopy(renderer, menu->bg, NULL, &menu->rect);
+    SDL_Rect bg_rect = { menu->rect.x, menu->rect.y, menu->w_bg, menu->h_bg };
+    SDL_RenderCopy(renderer, menu->bg, NULL, &bg_rect);
 
-    int xoff = 0, yoff = 0;
+    // FIXME: hardcoding of offsets for specific bg textures
+    int xoff = 12, yoff = 20;
+    if (menu->orientation == IMP_HORIZ) {
+        xoff = 24, yoff = 20;
+    }
+    
     for (int i = 0; i < menu->n; ++i) {
         ImpButton *button = menu->buttons[i];
         SDL_Rect rect = {
@@ -177,7 +194,12 @@ void imp_buttonmenu_event(ImpButtonMenu *menu, SDL_Event *e, ImpCursor *cursor) 
                 }
             }
 
-            int xoff = 0, yoff = 0;
+            // FIXME: hardcoding of offsets for specific bg textures
+            // FIXME: refactor into a function (duplicate code with render)
+            int xoff = 12, yoff = 20;
+            if (menu->orientation == IMP_HORIZ) {
+                xoff = 24, yoff = 20;
+            }
             for (int i = 0; i < menu->n; ++i) {
                 SDL_Rect button_rect = {menu->rect.x + xoff,
                                         menu->rect.y + yoff,

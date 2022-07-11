@@ -20,6 +20,8 @@ typedef struct Imp {
     ImpButtonMenu **button_menus;
     int n_button_menus;
     ImpLayerMenu *layer_menu;
+    SDL_Texture *bg;
+    int w_bg, h_bg;
 } Imp;
 
 #define DEFAULT_N_LAYERS 1
@@ -52,18 +54,21 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     }
 
     int gap_between_menu = 24;
-    SDL_Surface *vert_surf = IMG_Load("../res/png/vert-menu-bg.png");
-    SDL_Texture *vert_bg = SDL_CreateTextureFromSurface(renderer, vert_surf);
-    imp->button_menus[0] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x - 48 - gap_between_menu, imp->canvas->y},
+    char *vert_bg = "../res/png/button-menu-vert-jp-lavender.png";
+    imp->button_menus[0] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x - 48 - gap_between_menu - 20, imp->canvas->y},
         12, 48, 48, vert_bg, IMP_VERT, IMP_DOWNWARDS);
     imp_buttonmenu_select(imp->button_menus[0], 0);
     imp_buttonmenu_settask(imp->button_menus[0], 0, IMP_SELECT_CURSOR);
     imp_buttonmenu_settask(imp->button_menus[0], 1, IMP_SELECT_PENCIL);
 
-    SDL_Surface *horiz_surf = IMG_Load("../res/png/horiz-menu-bg.png");
-    SDL_Texture *horiz_bg = SDL_CreateTextureFromSurface(renderer, horiz_surf);
+    char *horiz_bg = "../res/png/button-menu-horiz-jp-lavender.png";
     imp->button_menus[1] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x, imp->canvas->y + imp->canvas->h + gap_between_menu},
         14, 64, 64, horiz_bg, IMP_HORIZ, IMP_RIGHTWARDS);
+    
+    SDL_Surface *bg_surf = IMG_Load("../res/patterns/bg.png");
+    imp->bg = SDL_CreateTextureFromSurface(renderer, bg_surf);
+    imp->w_bg = bg_surf->w;
+    imp->h_bg = bg_surf->h;
 
     return imp;
 }
@@ -98,10 +103,13 @@ void imp_render(Imp *imp, SDL_Window *window) {
     SDL_RenderClear(imp->renderer);
 
     // render bg/window
-    SDL_SetRenderDrawColor(imp->renderer, 0x33, 0x33, 0x33, 255);
-    SDL_Rect win_rect = {0};
-    SDL_GetWindowSize(window, &win_rect.w, &win_rect.h);
-    SDL_RenderFillRect(imp->renderer, &win_rect);
+    SDL_Rect wind = {0};
+    SDL_GetWindowSize(window, &wind.w, &wind.h);
+    for (int i = 0; i < wind.w; i += imp->w_bg) {
+        for (int j = -20; j < wind.h; j += imp->h_bg) {
+            SDL_RenderCopy(imp->renderer, imp->bg, NULL, &(SDL_Rect){ i, j, imp->w_bg, imp->h_bg });
+        }
+    }
 
     // render canvas
     imp_canvas_render(imp->renderer, imp->canvas);
