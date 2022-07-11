@@ -72,8 +72,7 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     canvas->y = h/2 - H_RESOLUTION/2;
     canvas->w = W_RESOLUTION;
     canvas->h = H_RESOLUTION;
-    canvas->dw = 0;
-    canvas->dh = 0;
+
     u32 format = SDL_GetWindowPixelFormat(window);
     SDL_PixelFormat *pixel_format = SDL_AllocFormat(format);
     SDL_Surface *surf =
@@ -89,8 +88,11 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     SDL_UnlockTexture(canvas->texture);
 
     // canvas->texture = SDL_CreateTextureFromSurface(renderer, surf);
-    SDL_Surface *border = IMG_Load("../res/png/border.png");
-    canvas->border = SDL_CreateTextureFromSurface(renderer, border);
+    SDL_Surface *bg = IMG_Load("../res/png/border.png");
+    canvas->bg = SDL_CreateTextureFromSurface(renderer, bg);
+    canvas->bg_rect = (SDL_Rect){
+        canvas->x, canvas->y, bg->w, bg->h
+    };
 
     return canvas;
 }
@@ -175,9 +177,9 @@ void imp_canvas_event(ImpCanvas *c, SDL_Event *e, ImpCursor *cursor) {
 }
 
 void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c) {
-    SDL_Rect canvas_rect = {c->x, c->y, fmax(c->w + c->dw, 0), fmax(c->h + c->dh, 0)};
-    SDL_RenderCopy(renderer, c->texture, NULL, &canvas_rect);
+    SDL_RenderCopy(renderer, c->bg, NULL, &c->bg_rect);
     SDL_RenderCopy(
-        renderer, c->border, NULL,
-        &(SDL_Rect){canvas_rect.x - 8, canvas_rect.y - 9, canvas_rect.w + 18, canvas_rect.h + 20});
+        renderer, c->texture, NULL,
+        &(SDL_Rect){c->x + 16, c->y + 16, c->w - 16, c->h - 16});
+ 
 }

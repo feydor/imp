@@ -1,7 +1,5 @@
 #include "imp.h"
-#include "layer.h"
 #include "ui/buttonpanel.h"
-#include "ui/layermenu.h"
 #include "canvas.h"
 #include <assert.h>
 #include <stdbool.h>
@@ -19,7 +17,6 @@ typedef struct Imp {
 
     ImpButtonMenu **button_menus;
     int n_button_menus;
-    ImpLayerMenu *layer_menu;
     SDL_Texture *bg;
     int w_bg, h_bg;
 } Imp;
@@ -62,7 +59,7 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp_buttonmenu_settask(imp->button_menus[0], 1, IMP_SELECT_PENCIL);
 
     char *horiz_bg = "../res/png/button-menu-horiz-jp-lavender.png";
-    imp->button_menus[1] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x, imp->canvas->y + imp->canvas->h + gap_between_menu},
+    imp->button_menus[1] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x, imp->canvas->y + imp->canvas->h + 2*gap_between_menu},
         14, 64, 64, horiz_bg, IMP_HORIZ, IMP_RIGHTWARDS);
     
     SDL_Surface *bg_surf = IMG_Load("../res/patterns/bg.png");
@@ -92,10 +89,7 @@ int imp_event(Imp *imp, SDL_Event *e) {
 void imp_update(Imp *imp, float dt) {
     // TODO
     (void) dt;
-    
-    const float zoom_rate = 0.1f;
-    imp->canvas->dh = imp->nzoom * imp->canvas->h * zoom_rate;
-    imp->canvas->dw = imp->nzoom * imp->canvas->w * zoom_rate;
+    (void) imp;
 }
 
 

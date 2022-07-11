@@ -21,9 +21,9 @@ typedef struct ImpCursor {
 
 typedef struct  {
     int x, y, w, h;
-    float dw, dh;
     SDL_Texture *texture;
-    SDL_Texture *border;
+    SDL_Texture *bg;
+    SDL_Rect bg_rect;
 } ImpCanvas;
 
 ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *layer0_text);
