@@ -1,11 +1,12 @@
 #include "imp.h"
-#include "ui/buttonpanel.h"
 #include "canvas.h"
+#include "ui/toolmenu.h"
+#include "ui/actionmenu.h"
+#include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <SDL2/SDL_image.h>
 #define MAX(a, b) (a > b ? a : b)
 
 typedef struct Imp {
@@ -14,17 +15,13 @@ typedef struct Imp {
     int nzoom;
     ImpCanvas *canvas;
     ImpCursor cursor;
+    ImpToolMenu *toolmenu;
+    ImpActionMenu *actionmenu;
 
-    ImpButtonMenu **button_menus;
-    int n_button_menus;
     SDL_Texture *bg;
     int w_bg, h_bg;
 } Imp;
 
-#define DEFAULT_N_LAYERS 1
-#define DEFAULT_N_BUTTON_MENUS 2
-#define N_BUTTON_VERT 2
-#define N_BUTTON_HORIZ 4
 #define DEFAULT_PENCIL_COLOR 0xFF0000
 
 Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture) {
@@ -41,26 +38,13 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->cursor.scroll_locked = false;
     imp->cursor.pencil_locked = false;
     imp->cursor.color = DEFAULT_PENCIL_COLOR;
-
     imp->canvas = create_imp_canvas(window, renderer, layer0_texture);
 
-    imp->n_button_menus = DEFAULT_N_BUTTON_MENUS;
-    imp->button_menus = malloc(sizeof(ImpButtonMenu *) * imp->n_button_menus);
-    if (!imp->button_menus) {
-        return NULL;
-    }
-
-    int gap_between_menu = 24;
     char *vert_bg = "../res/png/button-menu-vert-jp-lavender.png";
-    imp->button_menus[0] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x - 48 - gap_between_menu - 20, imp->canvas->y},
-        12, 48, 48, vert_bg, IMP_VERT, IMP_DOWNWARDS);
-    imp_buttonmenu_select(imp->button_menus[0], 0);
-    imp_buttonmenu_settask(imp->button_menus[0], 0, IMP_SELECT_CURSOR);
-    imp_buttonmenu_settask(imp->button_menus[0], 1, IMP_SELECT_PENCIL);
+    imp->toolmenu = create_imp_toolmenu(renderer, imp->canvas, vert_bg);
 
     char *horiz_bg = "../res/png/button-menu-horiz-jp-lavender.png";
-    imp->button_menus[1] = create_imp_buttonmenu(renderer, (SDL_Point){imp->canvas->x, imp->canvas->y + imp->canvas->h + 2*gap_between_menu},
-        14, 64, 64, horiz_bg, IMP_HORIZ, IMP_RIGHTWARDS);
+    imp->actionmenu = create_imp_actionmenu(renderer, imp->canvas, horiz_bg);
     
     SDL_Surface *bg_surf = IMG_Load("../res/patterns/bg.png");
     imp->bg = SDL_CreateTextureFromSurface(renderer, bg_surf);
@@ -80,8 +64,8 @@ int imp_event(Imp *imp, SDL_Event *e) {
     }
 
     imp_canvas_event(imp->canvas, e, &imp->cursor);
-    imp_buttonmenu_event(imp->button_menus[0], e, &imp->cursor);
-    imp_buttonmenu_event(imp->button_menus[1], e, &imp->cursor);
+    imp_toolmenu_event(imp->toolmenu, e, &imp->cursor);
+    imp_actionmenu_event(imp->actionmenu, e, &imp->cursor);
     return 1;
 }
 
@@ -109,6 +93,6 @@ void imp_render(Imp *imp, SDL_Window *window) {
     imp_canvas_render(imp->renderer, imp->canvas);
 
     // render ui
-    for (int i = 0; i < imp->n_button_menus; ++i)
-        imp_buttonmenu_render(imp->renderer, imp->button_menus[i]);
+    imp_toolmenu_render(imp->renderer, imp->toolmenu);
+    imp_actionmenu_render(imp->renderer, imp->actionmenu);
 }

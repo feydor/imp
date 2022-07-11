@@ -2,63 +2,6 @@
 #include <stdlib.h>
 #include <SDL2/SDL_image.h>
 
-static int fill_rounded_box_b(SDL_Surface *dst, int xo, int yo, int w, int h, int r, Uint32 color) {
-    int yd = dst->pitch / dst->format->BytesPerPixel;
-    Uint32 *pixels = NULL;
-
-    int x, y, i, j;
-    int rpsqrt2 = (int)(r / sqrt(2));
-
-    w /= 2;
-    h /= 2;
-
-    xo += w;
-    yo += h;
-
-    w -= r;
-    h -= r;
-
-    if (w < 0 || h < 0)
-        return 0;
-
-    SDL_LockSurface(dst);
-    pixels = (Uint32 *)(dst->pixels);
-
-    int sy = (yo - h) * yd;
-    int ey = (yo + h) * yd;
-    int sx = (xo - w);
-    int ex = (xo + w);
-    for (i = sy; i <= ey; i += yd)
-        for (j = sx - r; j <= ex + r; j++)
-            pixels[i + j] = color;
-
-    int d = -r;
-    int x2m1 = -1;
-    y = r;
-    for (x = 0; x <= rpsqrt2; x++) {
-        x2m1 += 2;
-        d += x2m1;
-        if (d >= 0) {
-            y--;
-            d -= (y * 2);
-        }
-
-        for (i = sx - x; i <= ex + x; i++)
-            pixels[sy - y * yd + i] = color;
-
-        for (i = sx - y; i <= ex + y; i++)
-            pixels[sy - x * yd + i] = color;
-
-        for (i = sx - y; i <= ex + y; i++)
-            pixels[ey + x * yd + i] = color;
-
-        for (i = sx - x; i <= ex + x; i++)
-            pixels[ey + y * yd + i] = color;
-    }
-    SDL_UnlockSurface(dst);
-    return 1;
-}               
-
 ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *layer0_text) {
     ImpCanvas *canvas = malloc(sizeof(ImpCanvas));
     if (!canvas) {
@@ -72,12 +15,6 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     canvas->y = h/2 - H_RESOLUTION/2;
     canvas->w = W_RESOLUTION;
     canvas->h = H_RESOLUTION;
-
-    u32 format = SDL_GetWindowPixelFormat(window);
-    SDL_PixelFormat *pixel_format = SDL_AllocFormat(format);
-    SDL_Surface *surf =
-        SDL_CreateRGBSurfaceWithFormat(0, canvas->w, canvas->h, 32, pixel_format->format);
-    fill_rounded_box_b(surf, 0, 0, canvas->w, canvas->h, 20, 0xFFFFFFFF);
     
     canvas->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_STREAMING, canvas->w, canvas->h);
@@ -87,7 +24,6 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     memset((u32 *)text_bytes, 0xFFFFFF, canvas->w * canvas->h * 4);
     SDL_UnlockTexture(canvas->texture);
 
-    // canvas->texture = SDL_CreateTextureFromSurface(renderer, surf);
     SDL_Surface *bg = IMG_Load("../res/png/border.png");
     canvas->bg = SDL_CreateTextureFromSurface(renderer, bg);
     canvas->bg_rect = (SDL_Rect){
@@ -181,5 +117,4 @@ void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c) {
     SDL_RenderCopy(
         renderer, c->texture, NULL,
         &(SDL_Rect){c->x + 16, c->y + 16, c->w - 16, c->h - 16});
- 
 }

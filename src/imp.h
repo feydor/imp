@@ -15,6 +15,4 @@ int imp_event(Imp *imp, SDL_Event *e);
 void imp_update(Imp *imp, float dt);
 void imp_render(Imp *imp, SDL_Window *window);
 
-int fill_rounded_box_b(SDL_Surface *dst, int xo, int yo, int w, int h, int r, Uint32 color);
-
 #endif
