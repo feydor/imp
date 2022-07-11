@@ -67,25 +67,14 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
 
 
 int imp_event(Imp *imp, SDL_Event *e) {
-    switch (e->type) {
-        case SDL_QUIT: return 0;
-        case SDL_KEYDOWN: {
-            if (e->key.keysym.sym == SDLK_ESCAPE) return 0;
-        } break;
-
-        case SDL_MOUSEMOTION: {
-            imp->cursor.x = e->button.x;
-            imp->cursor.y = e->button.y;
-        } break;
-
-        case SDL_MOUSEBUTTONUP: {
-            if (imp->cursor.mode == IMP_CURSOR) {
-                imp->cursor.scroll_locked = false;
-            }
-        } break;
+    if (e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEBUTTONUP || e->type == SDL_MOUSEMOTION) {
+        imp->cursor.x = e->button.x;
+        imp->cursor.y = e->button.y;
+    } else if (e->type == SDL_QUIT || (e->type == SDL_KEYDOWN && e->key.keysym.sym == SDLK_ESCAPE)) {
+        return 0;
     }
 
-    imp_canvas_event(imp->canvas, imp->window, e, &imp->cursor);
+    imp_canvas_event(imp->canvas, e, &imp->cursor);
     imp_buttonmenu_event(imp->button_menus[0], e, &imp->cursor);
     imp_buttonmenu_event(imp->button_menus[1], e, &imp->cursor);
     return 1;

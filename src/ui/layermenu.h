@@ -19,5 +19,5 @@ ImpLayerMenu *create_imp_layermenu(SDL_Renderer *renderer, SDL_Rect menu_rect, S
         SDL_Texture *init_layer_texture);
 bool imp_cursor_over_selected_layer(ImpLayerMenu *lmenu, ImpCursor *cursor);
 void imp_layermenu_event(ImpLayerMenu *menu, SDL_Window *w, SDL_Event *e, ImpCursor *cursor);
-void imp_layermenu_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayerMenu *menu);
+void imp_layermenu_render(SDL_Renderer *renderer, ImpLayerMenu *menu);
 #endif

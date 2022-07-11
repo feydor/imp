@@ -95,7 +95,7 @@ void imp_layermenu_event(ImpLayerMenu *menu, SDL_Window *w, SDL_Event *e, ImpCur
 
 
 // TODO: fix layers rendering after delete (specifically after drawing)
-void imp_layermenu_render(SDL_Renderer *renderer, ImpCanvas *canvas, ImpLayerMenu *menu) {
+void imp_layermenu_render(SDL_Renderer *renderer, ImpLayerMenu *menu) {
     // first render the layers themselves, then the ui menu
     // for (int i = 0; i < menu->n_layers; ++i)
     //     imp_layer_render(renderer, canvas, menu->layers[i]);
