@@ -15,7 +15,7 @@ typedef enum ImpCursorMode {
 typedef struct ImpCursor {
     SDL_Rect rect;
     ImpCursorMode mode;
-    u32 color;
+    u32 color; // RGBA
     int w_pencil, h_pencil;
     bool scroll_locked;
     bool pencil_locked;

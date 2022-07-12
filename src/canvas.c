@@ -4,6 +4,9 @@
 
 #define W_CANVAS_RESOLUTION 1080
 #define H_CANVAS_RESOLUTION 720
+#define rgb_red(rgb) ((rgb & 0xFF0000) >> 16)
+#define rgb_green(rgb) ((rgb & 0x00FF00) >> 8)
+#define rgb_blue(rgb) (rgb & 0x0000FF)
 
 ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *layer0_text) {
     ImpCanvas *canvas = malloc(sizeof(ImpCanvas));
@@ -13,6 +16,7 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
 
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
+    canvas->window_ref = window;
     canvas->rect.x = w/2 - W_CANVAS_RESOLUTION/2;
     canvas->rect.y = h/2 - H_CANVAS_RESOLUTION/2;
     canvas->rect.w = W_CANVAS_RESOLUTION;
@@ -47,6 +51,8 @@ static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
                           cursor->w_pencil,
                           cursor->h_pencil};
 
+    u32 format = SDL_GetWindowPixelFormat(canvas->window_ref);
+    SDL_PixelFormat *pixel_format = SDL_AllocFormat(format);
     void *raw_data;
     int pitch;
     SDL_LockTexture(canvas->texture, &edit_rect, &raw_data, &pitch);
@@ -54,9 +60,11 @@ static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     u32 *pixels = (u32 *)raw_data;
     int npixels = (pitch / 4) * edit_rect.h;
     for (int i = 0; i < npixels; ++i) {
-        pixels[i] = cursor->color;
+        // TODO: is png BGRA?
+        pixels[i] = SDL_MapRGBA(pixel_format, rgb_blue(cursor->color), rgb_green(cursor->color), rgb_red(cursor->color), 0xFF);
     }
     SDL_UnlockTexture(canvas->texture);
+    SDL_FreeFormat(pixel_format);
 }
 
 static void imp_canvas_draw_line(ImpCanvas *canvas, ImpCursor *cursor, SDL_Point *start, SDL_Point *end) {
@@ -103,7 +111,8 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
     case SDL_MOUSEMOTION: {
         if (cursor->pencil_locked && cursor->mode == IMP_PENCIL &&
                 SDL_HasIntersection(&canvas->rect, &cur_cursor)) {
-            imp_canvas_draw_line(canvas, cursor, &prev_cursor, &(SDL_Point){ xcur, ycur });
+            imp_canvas_pencil_draw(canvas, cursor);
+            // imp_canvas_draw_line(canvas, cursor, &prev_cursor, &(SDL_Point){ xcur, ycur });
         }
     } break;
 

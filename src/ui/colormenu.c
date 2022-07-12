@@ -105,6 +105,22 @@ ImpColorMenu *create_imp_colormenu(SDL_Renderer *renderer, ImpCanvas *canvas) {
     return menu;
 }
 
+void imp_colormenu_event(ImpColorMenu *menu, SDL_Event *e, ImpCursor *cursor) {
+    switch (e->type) {
+    case SDL_MOUSEBUTTONDOWN: {
+        if (SDL_HasIntersection(&menu->rect, &cursor->rect)) {
+            for (int i = 0; i < menu->n; ++i) {
+                ImpColorButton *but = menu->buttons[i];
+                if (SDL_HasIntersection(&but->rect, &cursor->rect)) {
+                    menu->selected = i;
+                    cursor->color = but->color;
+                }
+            }
+        }
+    }
+    }
+}
+
 void imp_colormenu_render(SDL_Renderer *renderer, ImpColorMenu *menu) {
     SDL_RenderCopy(renderer, menu->bg, NULL, &menu->bg_rect);
     
