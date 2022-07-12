@@ -6,19 +6,31 @@
 #define SIZE_COLOR_BUTTON 24
 #define H_COLOR_DISPLAY SIZE_COLOR_BUTTON
 #define W_COLOR_DISPLAY 2*SIZE_COLOR_BUTTON
-#define IMP_COLOR_BLACK 0x000000
-#define IMP_COLOR_GRAY 0x808080
-#define IMP_COLOR_RED 0xFF0000
-#define IMP_COLOR_ORANGE 0xFFA500
-#define IMP_COLOR_YELLOW 0xFFFF00
-#define IMP_COLOR_GREEN 0x32CD32
-#define IMP_COLOR_BLUE 0x0000FF
-#define IMP_COLOR_PURPLE 0x6A0DAD
 #define rgb_red(rgb) ((rgb & 0xFF0000) >> 16)
 #define rgb_green(rgb) ((rgb & 0x00FF00) >> 8)
 #define rgb_blue(rgb) (rgb & 0x0000FF)
 
 typedef uint32_t u32;
+
+typedef enum ImpColor {
+    IMP_COLOR_BLACK = 0x000000,
+    IMP_COLOR_GRAY = 0x808080,
+    IMP_COLOR_RED = 0xFF0000,
+    IMP_COLOR_ORANGE = 0xFFA500,
+    IMP_COLOR_YELLOW = 0xFFFF00,
+    IMP_COLOR_GREEN = 0x32CD32,
+    IMP_COLOR_BLUE = 0x0000FF,
+    IMP_COLOR_PURPLE = 0x6A0DAD,
+
+    IMP_COLOR_WHITE = 0xFFFFFF,
+    IMP_COLOR_LIGHT_GRAY = 0xb4b5b5,
+    IMP_COLOR_LIGHT_RED = 0xffb3ba,
+    IMP_COLOR_LIGHT_ORANGE = 0xffdfba,
+    IMP_COLOR_LIGHT_YELLOW = 0xffffba,
+    IMP_COLOR_LIGHT_GREEN = 0xbaffc9,
+    IMP_COLOR_LIGHT_BLUE = 0xbae1ff,
+    IMP_COLOR_LIGHT_PURPLE = 0x957DAD,
+} ImpColor;
 
 typedef struct ImpColorButton {
     u32 color;
@@ -71,7 +83,10 @@ ImpColorMenu *create_imp_colormenu(SDL_Renderer *renderer, ImpCanvas *canvas) {
     };
 
     // TODO: Use real secondary colors
-    u32 secondary_colors[] = {0x00FF00, 0xFF, 0x0, 0xFF, 0x0, 0xFF, 0x0, 0xFF};
+    u32 secondary_colors[] = {
+        IMP_COLOR_WHITE, IMP_COLOR_LIGHT_GRAY, IMP_COLOR_LIGHT_RED, IMP_COLOR_LIGHT_ORANGE,
+        IMP_COLOR_LIGHT_YELLOW, IMP_COLOR_LIGHT_GREEN, IMP_COLOR_LIGHT_BLUE, IMP_COLOR_LIGHT_PURPLE
+    };
 
     for (int i = 0; i < menu->n; ++i) {
         ImpColorButton *but = malloc(sizeof(ImpColorButton));

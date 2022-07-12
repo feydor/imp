@@ -66,7 +66,6 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
         SDL_Surface *surf = SDL_LoadBMP(path);
         SDL_Texture *text = NULL;
         if (!surf) {
-            fprintf(stderr, "failed to load texture from file: '%s'\n", path);
             text = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, menu->w_button, menu->h_button);
         } else {
             text = SDL_CreateTextureFromSurface(renderer, surf);

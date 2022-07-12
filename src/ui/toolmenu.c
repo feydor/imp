@@ -11,8 +11,8 @@ typedef enum ImpTool {
     IMP_TOOL_PENCIL,
 } ImpTool;
 
-#define BUTTON_0_TOOL IMP_TOOL_CURSOR
-#define BUTTON_1_TOOL IMP_TOOL_PENCIL
+#define BUTTON_0_TOOL IMP_TOOL_PENCIL
+#define BUTTON_1_TOOL IMP_TOOL_CURSOR
 
 typedef struct ImpToolButton {
     SDL_Texture *texture;
@@ -64,11 +64,10 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
     int ypadding_button = 10;
     for (int i = 0; i < menu->n; ++i) {
         char path[255];
-        sprintf(path, "../res/icons/tool-button%d.bmp", i);
-        SDL_Surface *surf = SDL_LoadBMP(path);
+        sprintf(path, "../res/icons/tool-button%d.webp", i);
+        SDL_Surface *surf = IMG_Load(path);
         SDL_Texture *text = NULL;
         if (!surf) {
-            fprintf(stderr, "failed to load texture from file: '%s'\n", path);
             text = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, menu->w_button, menu->h_button);
         } else {
             text = SDL_CreateTextureFromSurface(renderer, surf);
@@ -133,7 +132,8 @@ void imp_toolmenu_render(SDL_Renderer *renderer, ImpToolMenu *menu) {
         ImpToolButton *button = menu->buttons[i];
         SDL_RenderCopy(renderer, button->texture, NULL, &button->rect);
         if (i == menu->selected) {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 100);
+            // TODO: render a slightly larger pre-loaded verison, about 10 px
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 50);
             SDL_RenderFillRect(renderer, &button->rect);
         }
     }

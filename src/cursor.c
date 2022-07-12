@@ -3,7 +3,7 @@
 #define W_CURSOR 1
 #define H_CURSOR 1
 #define DEFAULT_PENCIL_SIZE 20
-#define DEFAULT_PENCIL_COLOR 0xFF0000
+#define DEFAULT_PENCIL_COLOR 0x000000
 
 ImpCursor *create_imp_cursor() {
     // TODO: pass in a texture/path to create a custom cursor texture

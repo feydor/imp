@@ -7,8 +7,8 @@
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <time.h>
-#define DEFAULT_WINDOW_H 725
-#define DEFAULT_WINDOW_W 1200
+#define DEFAULT_WINDOW_H 1000
+#define DEFAULT_WINDOW_W 1300
 #define PROGNAME "imp"
 #define MAX(a, b) (a > b ? a : b)
 
@@ -41,7 +41,7 @@ static SDL_Texture *make_texture_from_bmp(SDL_Renderer *renderer, BMP_file *bmp)
 static int sdl_ui(char *src) {
     SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED, DEFAULT_WINDOW_W,
-        DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_FULLSCREEN_DESKTOP);
+        DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
         SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -50,7 +50,7 @@ static int sdl_ui(char *src) {
         exit(fprintf(stderr, "Could not create SDL Renderer\n"));
     }
 
-    IMG_Init(IMG_INIT_PNG);
+    IMG_Init(IMG_INIT_PNG | IMG_INIT_WEBP);
     SDL_Surface *surf = IMG_Load(src);
     SDL_Surface *formatted = SDL_ConvertSurfaceFormat(surf, SDL_GetWindowPixelFormat(window), 0);
     SDL_Texture *layer0_texture = SDL_CreateTexture(renderer, SDL_GetWindowPixelFormat(window),

@@ -18,7 +18,7 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     SDL_GetWindowSize(window, &w, &h);
     canvas->window_ref = window;
     canvas->rect.x = w/2 - W_CANVAS_RESOLUTION/2;
-    canvas->rect.y = h/2 - H_CANVAS_RESOLUTION/2;
+    canvas->rect.y = h/2 - H_CANVAS_RESOLUTION/2 - 50;
     canvas->rect.w = W_CANVAS_RESOLUTION;
     canvas->rect.h = H_CANVAS_RESOLUTION;
     
