@@ -1,7 +1,7 @@
 #include "toolmenu.h"
 #include <SDL2/SDL_image.h>
 
-#define N_TOOL_BUTTONS 12
+#define N_TOOL_BUTTONS 11
 #define W_TOOL_BUTTON 48
 #define H_TOOL_BUTTON 48
 

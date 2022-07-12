@@ -1,24 +1,11 @@
 #ifndef IMP_CANVAS_H
 #define IMP_CANVAS_H
+#include "cursor.h"
 #include <SDL2/SDL.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 typedef uint32_t u32;
-
-typedef enum ImpCursorMode {
-    IMP_CURSOR,
-    IMP_PENCIL,
-} ImpCursorMode;
-                                                                         
-typedef struct ImpCursor {
-    SDL_Rect rect;
-    ImpCursorMode mode;
-    u32 color;
-    int w_pencil, h_pencil;
-    bool scroll_locked;
-    bool pencil_locked;
-} ImpCursor;
 
 typedef struct  {
     SDL_Rect rect;

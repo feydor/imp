@@ -36,12 +36,12 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
 
     // margin == outside background, padding == inside background
     int xpadding = 20, ypadding = 20;
-    int margin = 48;
+    int xmargin = 40, ymargin = 48;
     menu->n = N_TOOL_BUTTONS;
     menu->w_button = W_TOOL_BUTTON;
     menu->h_button = H_TOOL_BUTTON;
-    menu->rect.x = canvas->rect.x;
-    menu->rect.y = canvas->rect.y + canvas->rect.h + margin + ypadding;
+    menu->rect.x = canvas->rect.x + xmargin;
+    menu->rect.y = canvas->rect.y + canvas->rect.h + ymargin + ypadding;
     menu->rect.w = menu->n * menu->w_button;
     menu->rect.h = menu->h_button;
 
