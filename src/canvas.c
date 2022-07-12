@@ -7,6 +7,9 @@
 #define rgb_red(rgb) ((rgb & 0xFF0000) >> 16)
 #define rgb_green(rgb) ((rgb & 0x00FF00) >> 8)
 #define rgb_blue(rgb) (rgb & 0x0000FF)
+#define ABS(x) ((x) >= 0 ? (x) : -(x))
+#define SIGN(_x) ((_x) < 0 ? -1 : \
+		                 ((_x) > 0 ? 1 : 0))
 
 ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *layer0_text) {
     ImpCanvas *canvas = malloc(sizeof(ImpCanvas));
@@ -91,43 +94,88 @@ static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     SDL_FreeFormat(pixel_format);
 }
 
-static void imp_canvas_draw_line(ImpCanvas *canvas, ImpCursor *cursor, SDL_Point *start, SDL_Point *end) {
-    // TODO: Bresenhams algorithm
-    int x1 = start->x - canvas->rect.x;
-    int y1 = start->y - canvas->rect.y;
-    int x2 = end->x - canvas->rect.x;
-    int y2 = end->y - canvas->rect.y;
+static void set_pixel_color(u32 *pixels, int x, int y, int width, u32 color) {
+    pixels[x + y * width] = color;
+}
 
-    SDL_Rect edit = { x1, y1, fmax(4, x2-x1), fmax(4, y2-y1) };
-    void *rawdata;
-    int pitch;
-    SDL_LockTexture(canvas->texture, &edit, &rawdata, &pitch);
-    u32 *pixels = (u32 *)rawdata;
-    int npixels = (pitch / 4) * edit.h;
-    for (int i = 0; i < npixels; ++i) {
-        int x = i % abs((int)fmax(4, x2-x1));
-        int y = i / abs((int)fmax(4, x2-x1));
+static void line_gradient(u32 *pixels, int width, u32 color, int x1, int x2, int y1, int y2) {
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+    int inc_x = SIGN(dx);
+    int inc_y = SIGN(dy);
+    dx = abs(dx);
+    dy = abs(dy);
 
-        if (x == y) {
-            pixels[i] = cursor->color;
+    if (dy == 0) {
+        // horizontal line
+        for (int x = x1; x != x2 + inc_x; x += inc_x) {
+            set_pixel_color(pixels, x, y1, width, color);
+        }
+    } else if (dx == 0) {
+        // vertical line
+        for (int y = y1; y != y2 + inc_y; y += inc_y)
+            set_pixel_color(pixels, x1, y, width, color);
+    } else if (dx >= dy) {
+        // < 45 degrees
+        int slope = 2*dy;
+        int error = -dx;
+        int error_inc = -2*dx;
+        int y = y1;
+
+        for (int x = x1; x != x2 + inc_x; x += inc_x) {
+            set_pixel_color(pixels, x, y, width, color);
+            error += slope;
+            if (error >= 0) {
+                y += inc_y;
+                error += error_inc;
+            }
+        }
+    } else {
+        // > 45 degrees
+        int slope = 2*dx;
+        int error = -dy;
+        int error_inc = -2*dy;
+        int x = x1;
+
+        for (int y = y1; y != y2 + inc_y; y += inc_y) {
+            set_pixel_color(pixels, x, y, width, color);
+            error += slope;
+            if (error >= 0) {
+                x += inc_x;
+                error += error_inc;
+            }
         }
     }
+}
+
+static void imp_canvas_draw_line(ImpCanvas *canvas, ImpCursor *cursor, SDL_Point *start) {
+    int x1 = start->x - canvas->rect.x;
+    int y1 = start->y - canvas->rect.y;
+    int x2 = cursor->rect.x - canvas->rect.x;
+    int y2 = cursor->rect.y - canvas->rect.y;
+
+    // SDL_Rect edit = { x1, y1, fmax(40, dx), fmax(40, dy) };
+    void *rawdata;
+    int pitch;
+    SDL_LockTexture(canvas->texture, NULL, &rawdata, &pitch);
+    u32 *pixels = (u32 *)rawdata;
+    // int npixels = (pitch / 4) * edit.h;
+
+    line_gradient(pixels, canvas->rect.w, cursor->color, x1, x2, y1, y2);
+
     SDL_UnlockTexture(canvas->texture);
 }
 
 void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
-    SDL_Point prev_cursor = { cursor->rect.x, cursor->rect.y };
-
     int xcur, ycur;
     SDL_GetMouseState(&xcur, &ycur);
-    SDL_Rect cur_cursor = { xcur, ycur, 1, 1 };
     
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
         if (SDL_HasIntersection(&canvas->rect, &cursor->rect)) {
             if (cursor->mode == IMP_PENCIL) {
                 cursor->pencil_locked = true;
-                imp_canvas_pencil_draw(canvas, cursor);
+                // imp_canvas_pencil_draw(canvas, cursor);
             }
         }
     } break;
@@ -135,8 +183,7 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
     case SDL_MOUSEMOTION: {
         if (cursor->pencil_locked && cursor->mode == IMP_PENCIL &&
                 SDL_HasIntersection(&canvas->rect, &cursor->rect)) {
-            imp_canvas_pencil_draw(canvas, cursor);
-            // imp_canvas_draw_line(canvas, cursor, &prev_cursor, &(SDL_Point){ xcur, ycur });
+            imp_canvas_draw_line(canvas, cursor, &(SDL_Point){ xcur, ycur });
         }
     } break;
 

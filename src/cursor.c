@@ -14,7 +14,7 @@ ImpCursor *create_imp_cursor() {
     }
 
     cursor->rect = (SDL_Rect){ 0, 0, W_CURSOR, H_CURSOR };
-    cursor->mode = IMP_CURSOR;
+    cursor->mode = IMP_PENCIL;
     cursor->scroll_locked = false;
     cursor->pencil_locked = false;
     cursor->w_pencil = cursor->h_pencil = DEFAULT_PENCIL_SIZE;
