@@ -40,8 +40,8 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
     menu->n = N_TOOL_BUTTONS;
     menu->w_button = W_TOOL_BUTTON;
     menu->h_button = H_TOOL_BUTTON;
-    menu->rect.x = canvas->x;
-    menu->rect.y = canvas->y + canvas->h + margin + ypadding;
+    menu->rect.x = canvas->rect.x;
+    menu->rect.y = canvas->rect.y + canvas->rect.h + margin + ypadding;
     menu->rect.w = menu->n * menu->w_button;
     menu->rect.h = menu->h_button;
 
@@ -92,14 +92,12 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
 }
 
 void imp_actionmenu_event(ImpActionMenu *menu, SDL_Event *e, ImpCursor *cursor) {
-    SDL_Rect cursor_rect = { cursor->x, cursor->y, 1, 1 };
-
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
-        if (SDL_HasIntersection(&menu->rect, &cursor_rect)) {
+        if (SDL_HasIntersection(&menu->rect, &cursor->rect)) {
             for (int i = 0; i < menu->n; ++i) {
                 ImpActionButton *b = menu->buttons[i];
-                if (SDL_HasIntersection(&b->rect, &cursor_rect)) {
+                if (SDL_HasIntersection(&b->rect, &cursor->rect)) {
                     menu->buttons[i]->clicked = true;
                 }
             }

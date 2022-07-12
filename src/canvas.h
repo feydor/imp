@@ -12,15 +12,16 @@ typedef enum ImpCursorMode {
 } ImpCursorMode;
                                                                          
 typedef struct ImpCursor {
-    int x, y;
+    SDL_Rect rect;
     ImpCursorMode mode;
     u32 color;
+    int w_pencil, h_pencil;
     bool scroll_locked;
     bool pencil_locked;
 } ImpCursor;
 
 typedef struct  {
-    int x, y, w, h;
+    SDL_Rect rect;
     SDL_Texture *texture;
     SDL_Texture *bg;
     SDL_Rect bg_rect;

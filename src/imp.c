@@ -7,7 +7,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define W_CURSOR 1
+#define H_CURSOR 1
+#define DEFAULT_PENCIL_SIZE 5
 #define MAX(a, b) (a > b ? a : b)
+
 
 typedef struct Imp {
     SDL_Renderer *renderer;
@@ -33,10 +38,11 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->renderer = renderer;
     imp->window = window;
     imp->nzoom = 0;
-    imp->cursor.x = imp->cursor.y = 0;
+    imp->cursor.rect = (SDL_Rect){ 0, 0, W_CURSOR, H_CURSOR };
     imp->cursor.mode = IMP_CURSOR;
     imp->cursor.scroll_locked = false;
     imp->cursor.pencil_locked = false;
+    imp->cursor.w_pencil = imp->cursor.h_pencil = DEFAULT_PENCIL_SIZE;
     imp->cursor.color = DEFAULT_PENCIL_COLOR;
     imp->canvas = create_imp_canvas(window, renderer, layer0_texture);
 
@@ -57,8 +63,8 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
 
 int imp_event(Imp *imp, SDL_Event *e) {
     if (e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEBUTTONUP || e->type == SDL_MOUSEMOTION) {
-        imp->cursor.x = e->button.x;
-        imp->cursor.y = e->button.y;
+        imp->cursor.rect.x = e->button.x;
+        imp->cursor.rect.y = e->button.y;
     } else if (e->type == SDL_QUIT || (e->type == SDL_KEYDOWN && e->key.keysym.sym == SDLK_ESCAPE)) {
         return 0;
     }

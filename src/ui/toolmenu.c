@@ -42,8 +42,8 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
     menu->n = N_TOOL_BUTTONS;
     menu->w_button = W_TOOL_BUTTON;
     menu->h_button = H_TOOL_BUTTON;
-    menu->rect.x = canvas->x - margin - xpadding - menu->w_button;
-    menu->rect.y = canvas->y;
+    menu->rect.x = canvas->rect.x - margin - xpadding - menu->w_button;
+    menu->rect.y = canvas->rect.y;
     menu->rect.w = menu->w_button;
     menu->rect.h = menu->n * menu->h_button;
 
@@ -112,14 +112,12 @@ static void imp_toolmenu_dispatch(ImpToolMenu *menu, ImpToolButton *b, int i, Im
 }
 
 void imp_toolmenu_event(ImpToolMenu *menu, SDL_Event *e, ImpCursor *cursor) {
-    SDL_Rect cursor_rect = { cursor->x, cursor->y, 1, 1 };
-
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
-        if (SDL_HasIntersection(&menu->rect, &cursor_rect)) {
+        if (SDL_HasIntersection(&menu->rect, &cursor->rect)) {
             for (int i = 0; i < menu->n; ++i) {
                 ImpToolButton *b = menu->buttons[i];
-                if (SDL_HasIntersection(&b->rect, &cursor_rect)) {
+                if (SDL_HasIntersection(&b->rect, &cursor->rect)) {
                     imp_toolmenu_dispatch(menu, menu->buttons[i], i, cursor);
                 }
             }
