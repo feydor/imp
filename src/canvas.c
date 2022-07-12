@@ -43,11 +43,35 @@ static void print_rect(SDL_Rect *r, char *msg) {
     printf("%s: { x: %d, y: %d, w: %d, h: %d }\n", msg, r->x, r->y, r->w, r->h);
 }
 
+static int max(int a, int b) { return a > b ? a : b; }
+
+static int min(int a, int b) { return a < b ? a : b; }
+
+// clamp val into range [lower, upper]
+static int clamp(int val, int lower, int upper) { return max(lower, min(upper, val)); }
+
 static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     // TODO: adjustable pencil size (currently 4x4 pixel)
-    int ybuffer = 1, xbuffer = 1;
-    SDL_Rect edit_rect = {cursor->rect.x - canvas->rect.x + xbuffer,
-                          cursor->rect.y - canvas->rect.y + ybuffer,
+    int xrel = cursor->rect.x - canvas->rect.x;
+    int yrel = cursor->rect.y - canvas->rect.y;
+
+    // upper bounds
+    if (cursor->rect.x + cursor->w_pencil >= canvas->rect.x + canvas->rect.w) {
+        xrel = canvas->rect.x + canvas->rect.w - cursor->w_pencil;
+    }
+    if (cursor->rect.y + cursor->h_pencil >= canvas->rect.y + canvas->rect.h) {
+        yrel = canvas->rect.y + canvas->rect.h - cursor->h_pencil;
+    }
+
+    // lower bounds
+    if (cursor->rect.x < canvas->rect.x) {
+        xrel = canvas->rect.x;
+    }
+    if (cursor->rect.y < canvas->rect.y) {
+        yrel = canvas->rect.y;
+    }
+    SDL_Rect edit_rect = {xrel,
+                          yrel,
                           cursor->w_pencil,
                           cursor->h_pencil};
 
@@ -100,7 +124,7 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
     
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
-        if (SDL_HasIntersection(&canvas->rect, &cur_cursor)) {
+        if (SDL_HasIntersection(&canvas->rect, &cursor->rect)) {
             if (cursor->mode == IMP_PENCIL) {
                 cursor->pencil_locked = true;
                 imp_canvas_pencil_draw(canvas, cursor);
@@ -110,7 +134,7 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
 
     case SDL_MOUSEMOTION: {
         if (cursor->pencil_locked && cursor->mode == IMP_PENCIL &&
-                SDL_HasIntersection(&canvas->rect, &cur_cursor)) {
+                SDL_HasIntersection(&canvas->rect, &cursor->rect)) {
             imp_canvas_pencil_draw(canvas, cursor);
             // imp_canvas_draw_line(canvas, cursor, &prev_cursor, &(SDL_Point){ xcur, ycur });
         }
