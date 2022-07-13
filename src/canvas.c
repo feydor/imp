@@ -20,7 +20,7 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     canvas->window_ref = window;
-    canvas->rect.x = w/2 - W_CANVAS_RESOLUTION/2;
+    canvas->rect.x = w/2 - W_CANVAS_RESOLUTION/2 + 50;
     canvas->rect.y = h/2 - H_CANVAS_RESOLUTION/2 - 50;
     canvas->rect.w = W_CANVAS_RESOLUTION;
     canvas->rect.h = H_CANVAS_RESOLUTION;
@@ -33,11 +33,15 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     memset((u32 *)text_bytes, 0xFFFFFF, canvas->rect.w * 4*canvas->rect.h);
     SDL_UnlockTexture(canvas->texture);
 
+    int bgoff = 16;
     SDL_Surface *bg = IMG_Load("../res/png/border.png");
     canvas->bg = SDL_CreateTextureFromSurface(renderer, bg);
     canvas->bg_rect = (SDL_Rect){
-        canvas->rect.x, canvas->rect.y, bg->w, bg->h
+        canvas->rect.x-bgoff, canvas->rect.y-bgoff, bg->w+bgoff, bg->h+bgoff
     };
+
+    u32 format = SDL_GetWindowPixelFormat(window);
+    canvas->pixel_format = SDL_AllocFormat(format);
 
     return canvas;
 }
@@ -53,8 +57,12 @@ static int min(int a, int b) { return a < b ? a : b; }
 // clamp val into range [lower, upper]
 static int clamp(int val, int lower, int upper) { return max(lower, min(upper, val)); }
 
+// TODO: check for endianess
+u32 imp_rgba(ImpCanvas *c, u32 color) {
+    return SDL_MapRGBA(c->pixel_format, rgb_blue(color), rgb_green(color), rgb_red(color), 0xFF);
+}
+
 static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
-    // TODO: adjustable pencil size (currently 4x4 pixel)
     int xrel = cursor->rect.x - canvas->rect.x;
     int yrel = cursor->rect.y - canvas->rect.y;
 
@@ -78,27 +86,24 @@ static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
                           cursor->w_pencil,
                           cursor->h_pencil};
 
-    u32 format = SDL_GetWindowPixelFormat(canvas->window_ref);
-    SDL_PixelFormat *pixel_format = SDL_AllocFormat(format);
+    
     void *raw_data;
     int pitch;
     SDL_LockTexture(canvas->texture, &edit_rect, &raw_data, &pitch);
-
     u32 *pixels = (u32 *)raw_data;
     int npixels = (pitch / 4) * edit_rect.h;
     for (int i = 0; i < npixels; ++i) {
-        // TODO: is png BGRA?
-        pixels[i] = SDL_MapRGBA(pixel_format, rgb_blue(cursor->color), rgb_green(cursor->color), rgb_red(cursor->color), 0xFF);
+        pixels[i] = imp_rgba(canvas, cursor->color);
     }
     SDL_UnlockTexture(canvas->texture);
-    SDL_FreeFormat(pixel_format);
 }
 
-static void set_pixel_color(u32 *pixels, int x, int y, int width, u32 color) {
-    pixels[x + y * width] = color;
+static void set_pixel_color(ImpCanvas *c, u32 *pixels, int x, int y, int width, u32 color) {
+    pixels[x + y * width] = imp_rgba(c, color);
 }
 
-static void line_gradient(u32 *pixels, int width, u32 color, int x1, int x2, int y1, int y2) {
+// unused because slow
+static void line_gradient(ImpCanvas *canvas, u32 *pixels, int width, u32 color, int x1, int x2, int y1, int y2) {
     int dx = x2 - x1;
     int dy = y2 - y1;
     int inc_x = SIGN(dx);
@@ -109,12 +114,12 @@ static void line_gradient(u32 *pixels, int width, u32 color, int x1, int x2, int
     if (dy == 0) {
         // horizontal line
         for (int x = x1; x != x2 + inc_x; x += inc_x) {
-            set_pixel_color(pixels, x, y1, width, color);
+            set_pixel_color(canvas, pixels, x, y1, width, color);
         }
     } else if (dx == 0) {
         // vertical line
         for (int y = y1; y != y2 + inc_y; y += inc_y)
-            set_pixel_color(pixels, x1, y, width, color);
+            set_pixel_color(canvas, pixels, x1, y, width, color);
     } else if (dx >= dy) {
         // < 45 degrees
         int slope = 2*dy;
@@ -123,7 +128,7 @@ static void line_gradient(u32 *pixels, int width, u32 color, int x1, int x2, int
         int y = y1;
 
         for (int x = x1; x != x2 + inc_x; x += inc_x) {
-            set_pixel_color(pixels, x, y, width, color);
+            set_pixel_color(canvas, pixels, x, y, width, color);
             error += slope;
             if (error >= 0) {
                 y += inc_y;
@@ -138,7 +143,7 @@ static void line_gradient(u32 *pixels, int width, u32 color, int x1, int x2, int
         int x = x1;
 
         for (int y = y1; y != y2 + inc_y; y += inc_y) {
-            set_pixel_color(pixels, x, y, width, color);
+            set_pixel_color(canvas, pixels, x, y, width, color);
             error += slope;
             if (error >= 0) {
                 x += inc_x;
@@ -154,15 +159,11 @@ static void imp_canvas_draw_line(ImpCanvas *canvas, ImpCursor *cursor, SDL_Point
     int x2 = cursor->rect.x - canvas->rect.x;
     int y2 = cursor->rect.y - canvas->rect.y;
 
-    // SDL_Rect edit = { x1, y1, fmax(40, dx), fmax(40, dy) };
     void *rawdata;
     int pitch;
     SDL_LockTexture(canvas->texture, NULL, &rawdata, &pitch);
     u32 *pixels = (u32 *)rawdata;
-    // int npixels = (pitch / 4) * edit.h;
-
-    line_gradient(pixels, canvas->rect.w, cursor->color, x1, x2, y1, y2);
-
+    line_gradient(canvas, pixels, canvas->rect.w, cursor->color, x1, x2, y1, y2);
     SDL_UnlockTexture(canvas->texture);
 }
 
@@ -175,7 +176,7 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
         if (SDL_HasIntersection(&canvas->rect, &cursor->rect)) {
             if (cursor->mode == IMP_PENCIL) {
                 cursor->pencil_locked = true;
-                // imp_canvas_pencil_draw(canvas, cursor);
+                imp_canvas_pencil_draw(canvas, cursor);
             }
         }
     } break;
@@ -183,7 +184,7 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
     case SDL_MOUSEMOTION: {
         if (cursor->pencil_locked && cursor->mode == IMP_PENCIL &&
                 SDL_HasIntersection(&canvas->rect, &cursor->rect)) {
-            imp_canvas_draw_line(canvas, cursor, &(SDL_Point){ xcur, ycur });
+            imp_canvas_pencil_draw(canvas, cursor);
         }
     } break;
 
@@ -199,5 +200,5 @@ void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c) {
     SDL_RenderCopy(renderer, c->bg, NULL, &c->bg_rect);
     SDL_RenderCopy(
         renderer, c->texture, NULL,
-        &(SDL_Rect){c->rect.x + 16, c->rect.y + 16, c->rect.w - 16, c->rect.h - 16});
+        &(SDL_Rect){c->rect.x + 0, c->rect.y + 0, c->rect.w - 0, c->rect.h - 0});
 }

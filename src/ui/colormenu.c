@@ -58,7 +58,7 @@ ImpColorMenu *create_imp_colormenu(SDL_Renderer *renderer, ImpCanvas *canvas) {
         return NULL;
     }
 
-    int xmargin = 36, ymargin = 56;
+    int xmargin = 52, ymargin = 56;
     menu->rect.x = canvas->rect.x - xmargin - 2*SIZE_COLOR_BUTTON;
     menu->rect.y = canvas->rect.y + canvas->rect.h - ymargin;
     menu->rect.w = 2*SIZE_COLOR_BUTTON;

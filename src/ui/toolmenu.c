@@ -38,7 +38,7 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
 
     // margin == outside background, padding == inside background
     int xpadding = 12, ypadding = 20;
-    int margin = 24;
+    int margin = 40;
     menu->n = N_TOOL_BUTTONS;
     menu->w_button = W_TOOL_BUTTON;
     menu->h_button = H_TOOL_BUTTON;
