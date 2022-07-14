@@ -10,10 +10,12 @@ typedef uint32_t u32;
 typedef enum ImpCursorMode {
     IMP_CURSOR,
     IMP_PENCIL,
+    IMP_RECTANGLE,
 } ImpCursorMode;
                                                                          
 typedef struct ImpCursor {
     SDL_Rect rect;
+    SDL_Point fixed;
     ImpCursorMode mode;
     u32 color; // RGBA
     int w_pencil, h_pencil;

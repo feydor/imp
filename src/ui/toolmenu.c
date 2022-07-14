@@ -9,10 +9,13 @@ typedef enum ImpTool {
     IMP_TOOL_NOTHING,
     IMP_TOOL_CURSOR,
     IMP_TOOL_PENCIL,
+    IMP_TOOL_RECTANGLE,
+    IMP_TOOL_CIRCLE,
 } ImpTool;
 
 #define BUTTON_0_TOOL IMP_TOOL_PENCIL
-#define BUTTON_1_TOOL IMP_TOOL_CURSOR
+#define BUTTON_1_TOOL IMP_TOOL_RECTANGLE
+#define BUTTON_2_TOOL IMP_TOOL_CIRCLE
 
 typedef struct ImpToolButton {
     SDL_Texture *texture;
@@ -92,6 +95,7 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
     menu->selected = 0;
     menu->buttons[0]->tool = BUTTON_0_TOOL;
     menu->buttons[1]->tool = BUTTON_1_TOOL;
+    menu->buttons[2]->tool = BUTTON_2_TOOL;
     
     return menu;
 }
@@ -104,6 +108,10 @@ static void imp_toolmenu_dispatch(ImpToolMenu *menu, ImpToolButton *b, int i, Im
     } break;
     case IMP_TOOL_PENCIL: {
         cursor->mode = IMP_PENCIL;
+        menu->selected = i;
+    } break;
+    case IMP_TOOL_RECTANGLE: {
+        cursor->mode = IMP_RECTANGLE;
         menu->selected = i;
     } break;
     default: printf("button task not implemented.\n"); break;
