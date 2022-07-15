@@ -11,6 +11,7 @@ typedef enum ImpCursorMode {
     IMP_CURSOR,
     IMP_PENCIL,
     IMP_RECTANGLE,
+    IMP_CIRCLE,
 } ImpCursorMode;
                                                                          
 typedef struct ImpCursor {

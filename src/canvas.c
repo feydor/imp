@@ -11,6 +11,10 @@
 #define SIGN(_x) ((_x) < 0 ? -1 : \
 		                 ((_x) > 0 ? 1 : 0))
 
+typedef struct ImpCircleGuide {
+    unsigned x, y, r;
+} ImpCircleGuide;
+
 ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *layer0_text) {
     ImpCanvas *canvas = malloc(sizeof(ImpCanvas));
     if (!canvas) {
@@ -42,7 +46,7 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
 
     u32 format = SDL_GetWindowPixelFormat(window);
     canvas->pixel_format = SDL_AllocFormat(format);
-
+    canvas->circle_guide = NULL;
     return canvas;
 }
 
@@ -99,6 +103,10 @@ static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
 }
 
 static void set_pixel_color(ImpCanvas *c, u32 *pixels, int x, int y, int width, u32 color) {
+    if (x > width) {
+        fprintf(stderr, "buffer overflow in x: %d (width: %d)", x, width);
+    }
+    
     pixels[x + y * width] = imp_rgba(c, color);
 }
 
@@ -167,6 +175,86 @@ static void imp_canvas_draw_line(ImpCanvas *canvas, ImpCursor *cursor, SDL_Point
     SDL_UnlockTexture(canvas->texture);
 }
 
+// midpoint circle algorithm
+static void imp_canvas_render_circle(SDL_Renderer *renderer, int32_t centreX, int32_t centreY,
+                                     int32_t radius) {
+    const int32_t diameter = (radius * 2);
+
+    int32_t x = (radius - 1);
+    int32_t y = 0;
+    int32_t tx = 1;
+    int32_t ty = 1;
+    int32_t error = (tx - diameter);
+
+    while (x >= y) {
+        // Each of the following renders an octant of the circle
+        SDL_RenderDrawPoint(renderer, centreX + x, centreY - y);
+        SDL_RenderDrawPoint(renderer, centreX + x, centreY + y);
+        SDL_RenderDrawPoint(renderer, centreX - x, centreY - y);
+        SDL_RenderDrawPoint(renderer, centreX - x, centreY + y);
+        SDL_RenderDrawPoint(renderer, centreX + y, centreY - x);
+        SDL_RenderDrawPoint(renderer, centreX + y, centreY + x);
+        SDL_RenderDrawPoint(renderer, centreX - y, centreY - x);
+        SDL_RenderDrawPoint(renderer, centreX - y, centreY + x);
+
+        if (error <= 0) {
+            ++y;
+            error += ty;
+            ty += 2;
+        }
+
+        if (error > 0) {
+            --x;
+            tx += 2;
+            error += (tx - diameter);
+        }
+    }
+}
+
+static void midpoint_draw_circle(ImpCanvas *c, u32 *pixels, u32 color, int width, int32_t centreX,
+                                 int32_t centreY, int32_t radius) {
+    const int32_t diameter = radius * 2;
+
+    int32_t x = radius - 1;
+    int32_t y = 0;
+    int32_t tx = 1;
+    int32_t ty = 1;
+    int32_t error = tx - diameter;
+
+    while (x >= y) {
+        // Each of the following renders an octant of the circle
+        set_pixel_color(c, pixels, centreX + x, centreY - y, width, color);
+        set_pixel_color(c, pixels, centreX + x, centreY + y, width, color);
+        set_pixel_color(c, pixels, centreX - x, centreY - y, width, color);
+        set_pixel_color(c, pixels, centreX - x, centreY + y, width, color);
+        set_pixel_color(c, pixels, centreX + y, centreY - x, width, color);
+        set_pixel_color(c, pixels, centreX + y, centreY + x, width, color);
+        set_pixel_color(c, pixels, centreX - y, centreY - x, width, color);
+        set_pixel_color(c, pixels, centreX - y, centreY + x, width, color);
+
+        if (error <= 0) {
+            ++y;
+            error += ty;
+            ty += 2;
+        }
+
+        if (error > 0) {
+            --x;
+            tx += 2;
+            error += (tx - diameter);
+        }
+    }
+}
+
+static ImpCircleGuide* imp_canvas_circle_guide(ImpCursor *cursor) {
+    ImpCircleGuide *guide = malloc(sizeof(ImpCircleGuide));
+    if (!guide) return NULL;
+    guide->x = cursor->fixed.x;
+    guide->y = cursor->fixed.y;
+    guide->r = abs(cursor->fixed.x - cursor->rect.x);
+    return guide;
+}
+
 static void imp_canvas_rectangle_guide(ImpCanvas *canvas, ImpCursor *cursor) {
     SDL_Rect guide = {0};
     int dx = cursor->rect.x - cursor->fixed.x;
@@ -213,7 +301,7 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
             if (cursor->mode == IMP_PENCIL) {
                 cursor->pencil_locked = true;
                 imp_canvas_pencil_draw(canvas, cursor);
-            } else if (cursor->mode == IMP_RECTANGLE) {
+            } else if (cursor->mode == IMP_RECTANGLE || cursor->mode == IMP_CIRCLE) {
                 cursor->pencil_locked = true;
                 int xcur, ycur;
                 SDL_GetMouseState(&xcur, &ycur);
@@ -230,6 +318,8 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
             imp_canvas_pencil_draw(canvas, cursor);
         } else if (cursor->mode == IMP_RECTANGLE) {
             imp_canvas_rectangle_guide(canvas, cursor);
+        } else if (cursor->mode == IMP_CIRCLE) {
+            canvas->circle_guide = imp_canvas_circle_guide(cursor);
         }
     } break;
 
@@ -239,8 +329,15 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
         if (cursor->mode == IMP_RECTANGLE) {
             imp_canvas_rectange_guide_draw(canvas, cursor);
             canvas->rectangle_guide = (SDL_Rect){0};
+        } else if (cursor->mode == IMP_CIRCLE) {
+            if (canvas->circle_guide) {
+                // TODO
+                // imp_canvas_circle_guide_draw(canvas, cursor);
+                free(canvas->circle_guide);
+                canvas->circle_guide = NULL;
+            }
         }
-        
+
     } break;
     }
 }
@@ -253,4 +350,8 @@ void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c) {
     
     SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0xFF, 255);
     SDL_RenderDrawRect(renderer, &c->rectangle_guide);
+
+    if (c->circle_guide) {
+        imp_canvas_render_circle(renderer, c->circle_guide->x, c->circle_guide->y, c->circle_guide->r);
+    }
 }

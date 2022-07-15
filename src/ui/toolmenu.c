@@ -114,6 +114,10 @@ static void imp_toolmenu_dispatch(ImpToolMenu *menu, ImpToolButton *b, int i, Im
         cursor->mode = IMP_RECTANGLE;
         menu->selected = i;
     } break;
+    case IMP_TOOL_CIRCLE: {
+        cursor->mode = IMP_CIRCLE;
+        menu->selected = i;
+    } break;
     default: printf("button task not implemented.\n"); break;
     }
 }
