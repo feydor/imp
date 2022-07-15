@@ -14,6 +14,7 @@ typedef struct  {
     SDL_Rect bg_rect;
     SDL_Window *window_ref;
     SDL_PixelFormat *pixel_format;
+    SDL_Rect rectangle_guide;
 } ImpCanvas;
 
 ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *layer0_text);

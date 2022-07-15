@@ -211,20 +211,57 @@ static void imp_canvas_rectange_draw(ImpCanvas *canvas, ImpCursor *cursor, SDL_P
     SDL_UnlockTexture(canvas->texture);
 }
 
+static void imp_canvas_rectangle_guide(ImpCanvas *canvas, ImpCursor *cursor) {
+    SDL_Rect guide = {0};
+    int dx = cursor->rect.x - cursor->fixed.x;
+    int dy = cursor->rect.y - cursor->fixed.y;
+    guide.w = abs(dx);
+    guide.h = abs(dy);
+
+    if (dy > 0) {
+        guide.y = cursor->fixed.y;
+    } else if (dy < 0) {
+        guide.y = cursor->fixed.y + dy;
+    }
+
+    if (dx > 0) {
+        guide.x = cursor->fixed.x;
+    } else if (dx < 0) {
+        guide.x = cursor->fixed.x + dx;
+    }
+    canvas->rectangle_guide = guide;
+}
+
+static void imp_canvas_rectange_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
+    SDL_Rect relative = { canvas->rectangle_guide.x-canvas->rect.x,
+                          canvas->rectangle_guide.y-canvas->rect.y,
+                          canvas->rectangle_guide.w,
+                          canvas->rectangle_guide.h };
+    void *raw_data;
+    int pitch;
+    SDL_LockTexture(canvas->texture, &relative, &raw_data, &pitch);
+    u32 *pixels = (u32 *)raw_data;
+    int npixels = (pitch / 4) * canvas->rectangle_guide.h;
+    for (int i = 0; i < npixels; ++i) {
+        pixels[i] = imp_rgba(canvas, cursor->color);
+    }
+    SDL_UnlockTexture(canvas->texture);
+}
+
 void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
-    int xcur, ycur;
-    SDL_GetMouseState(&xcur, &ycur);
-    
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
+        if (cursor->pencil_locked) break;
+
         if (SDL_HasIntersection(&canvas->rect, &cursor->rect)) {
             if (cursor->mode == IMP_PENCIL) {
                 cursor->pencil_locked = true;
                 imp_canvas_pencil_draw(canvas, cursor);
             } else if (cursor->mode == IMP_RECTANGLE) {
                 cursor->pencil_locked = true;
+                int xcur, ycur;
+                SDL_GetMouseState(&xcur, &ycur);
                 cursor->fixed = (SDL_Point){ xcur, ycur };
-                imp_canvas_rectange_draw(canvas, cursor, cursor->fixed);
             }
         }
     } break;
@@ -236,12 +273,18 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
         if (cursor->mode == IMP_PENCIL) {
             imp_canvas_pencil_draw(canvas, cursor);
         } else if (cursor->mode == IMP_RECTANGLE) {
-            imp_canvas_rectange_draw(canvas, cursor, cursor->fixed);   
+            imp_canvas_rectangle_guide(canvas, cursor);
         }
     } break;
 
     case SDL_MOUSEBUTTONUP: {
         cursor->pencil_locked = false;
+
+        if (cursor->mode == IMP_RECTANGLE) {
+            imp_canvas_rectange_guide_draw(canvas, cursor);
+            canvas->rectangle_guide = (SDL_Rect){0};
+        }
+        
     } break;
     }
 }
@@ -251,4 +294,7 @@ void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c) {
     SDL_RenderCopy(
         renderer, c->texture, NULL,
         &(SDL_Rect){c->rect.x + 0, c->rect.y + 0, c->rect.w - 0, c->rect.h - 0});
+    
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0xFF, 255);
+    SDL_RenderDrawRect(renderer, &c->rectangle_guide);
 }
