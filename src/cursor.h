@@ -12,6 +12,9 @@ typedef enum ImpCursorMode {
     IMP_PENCIL,
     IMP_RECTANGLE,
     IMP_CIRCLE,
+    IMP_LINE,
+    IMP_BUCKET,
+    IMP_STAMP,
 } ImpCursorMode;
                                                                          
 typedef struct ImpCursor {
@@ -19,7 +22,7 @@ typedef struct ImpCursor {
     SDL_Point fixed;
     ImpCursorMode mode;
     u32 color; // RGBA
-    int w_pencil, h_pencil;
+    size_t w_pencil, h_pencil;
     bool scroll_locked;
     bool pencil_locked;
 } ImpCursor;
