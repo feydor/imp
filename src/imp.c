@@ -61,7 +61,12 @@ int imp_event(Imp *imp, SDL_Event *e) {
     }
 
     imp_canvas_event(imp->canvas, e, imp->cursor);
-    imp_toolmenu_event(imp->toolmenu, e, imp->cursor);
+
+    ImpTool returned;
+    if ((returned = imp_toolmenu_event(imp->toolmenu, e, imp->cursor))) {
+        imp_actionmenu_ontoolchange(imp->actionmenu, returned);
+    }
+
     imp_actionmenu_event(imp->actionmenu, e, imp->cursor);
     imp_colormenu_event(imp->colormenu, e, imp->cursor);
     return 1;
