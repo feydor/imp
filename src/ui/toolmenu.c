@@ -9,6 +9,8 @@
 #define BUTTON_2_TOOL IMP_TOOL_CIRCLE
 #define BUTTON_3_TOOL IMP_TOOL_LINE
 #define BUTTON_4_TOOL IMP_TOOL_BUCKET
+// ...
+#define BUTTON_10_TOOL IMP_TOOL_SAVE
 
 typedef struct ImpToolButton {
     SDL_Texture *texture;
@@ -42,7 +44,7 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
     menu->rect.x = canvas->rect.x - margin - xpadding - menu->w_button;
     menu->rect.y = canvas->rect.y;
     menu->rect.w = menu->w_button;
-    menu->rect.h = menu->n * menu->h_button;
+    menu->rect.h = menu->n * menu->h_button + (menu->n * ypadding);
 
     SDL_Surface *bg_surf = IMG_Load(bg_path);
     menu->bg_rect = (SDL_Rect){0};
@@ -93,7 +95,9 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
     menu->buttons[2]->tool = BUTTON_2_TOOL;
     menu->buttons[3]->tool = BUTTON_3_TOOL;
     menu->buttons[4]->tool = BUTTON_4_TOOL;
-    
+    // ...
+    menu->buttons[10]->tool = BUTTON_10_TOOL;
+
     return menu;
 }
 

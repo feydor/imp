@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef uint32_t u32;
-
+typedef uint32_t u32;   
+typedef enum ImpTool ImpTool;
 typedef struct ImpCircleGuide ImpCircleGuide;
 
 typedef struct ImpColorMasks {
@@ -35,10 +35,12 @@ typedef struct  {
     size_t pitch; // bytes per row
     size_t depth; // RGBA bits
     size_t size_line;
+    char *output;
+    bool save_lock;
 } ImpCanvas;
 
-ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer);
-void imp_canvas_event(ImpCanvas *c, SDL_Event *e, ImpCursor *cursor);
+ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, char *output);
+void imp_canvas_event(ImpCanvas *c, SDL_Event *e, ImpCursor *cursor, ImpTool currtool);
 void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c);
 
 void imp_canvas_bounds_checking(ImpCanvas *canvas, int *x, int *y, int xoff, int yoff);

@@ -15,6 +15,7 @@ typedef enum ImpTool {
     IMP_TOOL_LINE,
     IMP_TOOL_BUCKET,
     IMP_TOOL_STAMP,
+    IMP_TOOL_SAVE,
 } ImpTool;
 
 ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char *bg_path);

@@ -1,4 +1,5 @@
 #include "canvas.h"
+#include "ui/toolmenu.h"
 #include <stdlib.h>
 #include <SDL2/SDL_image.h>
 
@@ -17,7 +18,7 @@ u32 imp_rgba(ImpCanvas *c, u32 color) {
     return SDL_MapRGBA(c->pixel_format, rgb_red(color), rgb_green(color), rgb_blue(color), 255);
 }
 
-ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer) {
+ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, char *output) {
     ImpCanvas *canvas = malloc(sizeof(ImpCanvas));
     if (!canvas) {
         return NULL;
@@ -60,6 +61,8 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer) {
     canvas->circle_guide = (ImpCircleGuide){0};
     canvas->line_guide = (ImpLineGuide){0};
     canvas->size_line = SIZE_LINE;
+    canvas->output = output;
+    canvas->save_lock = false;
     return canvas;
 }
 
@@ -264,7 +267,7 @@ static void imp_canvas_line_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     SDL_FreeSurface(line_surf);
 }
 
-void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
+void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor, ImpTool currtool) {
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
         if (cursor->pencil_locked) break;
@@ -312,6 +315,13 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
         }
 
     } break;
+    }
+
+    if (!canvas->save_lock && currtool == IMP_TOOL_SAVE) {
+        // TODO: reset save_lock when a different tool than SAVE is selected
+        IMG_SavePNG(canvas->surf, canvas->output);
+        canvas->save_lock = true;
+        printf("saving to: %s\n", canvas->output);
     }
 }
 

@@ -11,6 +11,7 @@
 #include <string.h>
 
 #define MAX(a, b) (a > b ? a : b)
+#define DEFAULT_OUTPUT_FILENAME "out.png"
 
 typedef struct Imp {
     SDL_Renderer *renderer;
@@ -34,7 +35,7 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
     imp->renderer = renderer;
     imp->window = window;
     imp->cursor = create_imp_cursor();
-    imp->canvas = create_imp_canvas(window, renderer);
+    imp->canvas = create_imp_canvas(window, renderer, DEFAULT_OUTPUT_FILENAME);
     imp->colormenu = create_imp_colormenu(renderer, imp->canvas);
 
     char *vert_bg = "../res/png/button-menu-vert-jp-lavender.png";
@@ -60,13 +61,13 @@ int imp_event(Imp *imp, SDL_Event *e) {
         return 0;
     }
 
-    imp_canvas_event(imp->canvas, e, imp->cursor);
+    
 
-    ImpTool returned;
-    if ((returned = imp_toolmenu_event(imp->toolmenu, e, imp->cursor))) {
+    ImpTool returned = imp_toolmenu_event(imp->toolmenu, e, imp->cursor);
+    if (returned) {
         imp_actionmenu_ontoolchange(imp->actionmenu, returned);
     }
-
+    imp_canvas_event(imp->canvas, e, imp->cursor, returned);
     imp_actionmenu_event(imp->actionmenu, e, imp->cursor);
     imp_colormenu_event(imp->colormenu, e, imp->cursor);
     return 1;

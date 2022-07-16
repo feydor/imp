@@ -88,6 +88,7 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
 }
 
 void imp_actionmenu_ontoolchange(ImpActionMenu *menu, ImpTool tool) {
+    // TODO
     printf("ontoolchange\n");
 }
 
