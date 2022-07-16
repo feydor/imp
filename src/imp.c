@@ -25,7 +25,7 @@ typedef struct Imp {
     int w_bg, h_bg;
 } Imp;
 
-Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_texture) {
+Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
     Imp *imp = malloc(sizeof(Imp));
     if (!imp) {
         return NULL;
@@ -34,7 +34,7 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window, SDL_Texture *layer0_
     imp->renderer = renderer;
     imp->window = window;
     imp->cursor = create_imp_cursor();
-    imp->canvas = create_imp_canvas(window, renderer, layer0_texture);
+    imp->canvas = create_imp_canvas(window, renderer);
     imp->colormenu = create_imp_colormenu(renderer, imp->canvas);
 
     char *vert_bg = "../res/png/button-menu-vert-jp-lavender.png";

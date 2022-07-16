@@ -51,21 +51,11 @@ static int sdl_ui(char *src) {
     }
 
     IMG_Init(IMG_INIT_PNG | IMG_INIT_WEBP);
-    SDL_Surface *surf = IMG_Load(src);
-    SDL_Surface *formatted = SDL_ConvertSurfaceFormat(surf, SDL_GetWindowPixelFormat(window), 0);
-    SDL_Texture *layer0_texture = SDL_CreateTexture(renderer, SDL_GetWindowPixelFormat(window),
-        SDL_TEXTUREACCESS_STREAMING, formatted->w, formatted->h);
+    // TODO: load the user's file
+    // SDL_Surface *surf = IMG_Load(src);
+    // SDL_Surface *formatted = SDL_ConvertSurfaceFormat(surf, SDL_GetWindowPixelFormat(window), 0);
 
-    void *pixels;
-    int wpitch;
-    SDL_LockTexture(layer0_texture, NULL, &pixels, &wpitch);
-    memcpy(pixels, formatted->pixels, formatted->pitch * formatted->h);
-    SDL_UnlockTexture(layer0_texture);
-    SDL_FreeSurface(formatted);
-    SDL_FreeSurface(surf);
-    pixels = NULL;
-
-    Imp *imp = create_imp(renderer, window, layer0_texture);
+    Imp *imp = create_imp(renderer, window);
     if (!imp) {
         exit(fprintf(stderr, "imp was NULL\n"));
     }

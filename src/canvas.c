@@ -15,7 +15,12 @@ typedef struct ImpCircleGuide {
     unsigned x, y, r;
 } ImpCircleGuide;
 
-ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *layer0_text) {
+// TODO: check for endianess
+u32 imp_rgba(ImpCanvas *c, u32 color) {
+    return SDL_MapRGBA(c->pixel_format, rgb_blue(color), rgb_green(color), rgb_red(color), 255);
+}
+
+ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer) {
     ImpCanvas *canvas = malloc(sizeof(ImpCanvas));
     if (!canvas) {
         return NULL;
@@ -28,14 +33,33 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
     canvas->rect.y = h/2 - H_CANVAS_RESOLUTION/2 - 50;
     canvas->rect.w = W_CANVAS_RESOLUTION;
     canvas->rect.h = H_CANVAS_RESOLUTION;
-    
-    canvas->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-        SDL_TEXTUREACCESS_STREAMING, canvas->rect.w, canvas->rect.h);
-    void *text_bytes;
-    int text_pitch;
-    SDL_LockTexture(canvas->texture, NULL, &text_bytes, &text_pitch);
-    memset((u32 *)text_bytes, 0xFFFFFF, canvas->rect.w * 4*canvas->rect.h);
-    SDL_UnlockTexture(canvas->texture);
+
+    // TODO: change this based on endianess
+    u32 pixel_format;
+    #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    pixel_format = SDL_PIXELFORMAT_RGBA32;
+    #else
+    pixel_format = SDL_PIXELFORMAT_ABGR32;
+    #endif
+    canvas->pixel_format = SDL_AllocFormat(pixel_format);
+    canvas->pitch = 4*canvas->rect.w;
+    canvas->depth = 32;
+    uint32_t rmask, gmask, bmask;
+    #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+        rmask = 0x0000FF00;
+        gmask = 0x00FF0000;
+        bmask = 0xFF000000;
+    #else
+        rmask = 0xFF000000;
+        gmask = 0x00FF0000;
+        bmask = 0x0000FF00;
+    #endif
+    canvas->surf = SDL_CreateRGBSurface(0, canvas->rect.w, canvas->rect.h, canvas->depth, rmask, gmask, bmask, 0x00);
+    SDL_FillRect(canvas->surf, NULL, 0xFFFFFFFF);
+
+    if (!canvas->surf) {
+        fprintf(stderr, "%s\n", SDL_GetError());
+    }
 
     int bgoff = 16;
     SDL_Surface *bg = IMG_Load("../res/png/border.png");
@@ -44,8 +68,6 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, SDL_Tex
         canvas->rect.x-bgoff, canvas->rect.y-bgoff, bg->w+bgoff, bg->h+bgoff
     };
 
-    u32 format = SDL_GetWindowPixelFormat(window);
-    canvas->pixel_format = SDL_AllocFormat(format);
     canvas->circle_guide = NULL;
     return canvas;
 }
@@ -60,11 +82,6 @@ static int min(int a, int b) { return a < b ? a : b; }
 
 // clamp val into range [lower, upper]
 static int clamp(int val, int lower, int upper) { return max(lower, min(upper, val)); }
-
-// TODO: check for endianess
-u32 imp_rgba(ImpCanvas *c, u32 color) {
-    return SDL_MapRGBA(c->pixel_format, rgb_blue(color), rgb_green(color), rgb_red(color), 0xFF);
-}
 
 static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     int xrel = cursor->rect.x - canvas->rect.x;
@@ -85,21 +102,9 @@ static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     if (cursor->rect.y < canvas->rect.y) {
         yrel = canvas->rect.y;
     }
-    SDL_Rect edit_rect = {xrel,
-                          yrel,
-                          cursor->w_pencil,
-                          cursor->h_pencil};
 
-    
-    void *raw_data;
-    int pitch;
-    SDL_LockTexture(canvas->texture, &edit_rect, &raw_data, &pitch);
-    u32 *pixels = (u32 *)raw_data;
-    int npixels = (pitch / 4) * edit_rect.h;
-    for (int i = 0; i < npixels; ++i) {
-        pixels[i] = imp_rgba(canvas, cursor->color);
-    }
-    SDL_UnlockTexture(canvas->texture);
+    SDL_Rect area = {xrel, yrel, cursor->w_pencil, cursor->h_pencil};
+    SDL_FillRect(canvas->surf, &area, imp_rgba(canvas, cursor->color));
 }
 
 static void set_pixel_color(ImpCanvas *c, u32 *pixels, int x, int y, int width, u32 color) {
@@ -161,19 +166,19 @@ static void line_gradient(ImpCanvas *canvas, u32 *pixels, int width, u32 color, 
     }
 }
 
-static void imp_canvas_draw_line(ImpCanvas *canvas, ImpCursor *cursor, SDL_Point *start) {
-    int x1 = start->x - canvas->rect.x;
-    int y1 = start->y - canvas->rect.y;
-    int x2 = cursor->rect.x - canvas->rect.x;
-    int y2 = cursor->rect.y - canvas->rect.y;
+// static void imp_canvas_draw_line(ImpCanvas *canvas, ImpCursor *cursor, SDL_Point *start) {
+//     int x1 = start->x - canvas->rect.x;
+//     int y1 = start->y - canvas->rect.y;
+//     int x2 = cursor->rect.x - canvas->rect.x;
+//     int y2 = cursor->rect.y - canvas->rect.y;
 
-    void *rawdata;
-    int pitch;
-    SDL_LockTexture(canvas->texture, NULL, &rawdata, &pitch);
-    u32 *pixels = (u32 *)rawdata;
-    line_gradient(canvas, pixels, canvas->rect.w, cursor->color, x1, x2, y1, y2);
-    SDL_UnlockTexture(canvas->texture);
-}
+//     void *rawdata;
+//     int pitch;
+//     SDL_LockTexture(canvas->texture, NULL, &rawdata, &pitch);
+//     u32 *pixels = (u32 *)rawdata;
+//     line_gradient(canvas, pixels, canvas->rect.w, cursor->color, x1, x2, y1, y2);
+//     SDL_UnlockTexture(canvas->texture);
+// }
 
 // midpoint circle algorithm
 static void imp_canvas_render_circle(SDL_Renderer *renderer, int32_t centreX, int32_t centreY,
@@ -196,41 +201,6 @@ static void imp_canvas_render_circle(SDL_Renderer *renderer, int32_t centreX, in
         SDL_RenderDrawPoint(renderer, centreX + y, centreY + x);
         SDL_RenderDrawPoint(renderer, centreX - y, centreY - x);
         SDL_RenderDrawPoint(renderer, centreX - y, centreY + x);
-
-        if (error <= 0) {
-            ++y;
-            error += ty;
-            ty += 2;
-        }
-
-        if (error > 0) {
-            --x;
-            tx += 2;
-            error += (tx - diameter);
-        }
-    }
-}
-
-static void midpoint_draw_circle(ImpCanvas *c, u32 *pixels, u32 color, int width, int32_t centreX,
-                                 int32_t centreY, int32_t radius) {
-    const int32_t diameter = radius * 2;
-
-    int32_t x = radius - 1;
-    int32_t y = 0;
-    int32_t tx = 1;
-    int32_t ty = 1;
-    int32_t error = tx - diameter;
-
-    while (x >= y) {
-        // Each of the following renders an octant of the circle
-        set_pixel_color(c, pixels, centreX + x, centreY - y, width, color);
-        set_pixel_color(c, pixels, centreX + x, centreY + y, width, color);
-        set_pixel_color(c, pixels, centreX - x, centreY - y, width, color);
-        set_pixel_color(c, pixels, centreX - x, centreY + y, width, color);
-        set_pixel_color(c, pixels, centreX + y, centreY - x, width, color);
-        set_pixel_color(c, pixels, centreX + y, centreY + x, width, color);
-        set_pixel_color(c, pixels, centreX - y, centreY - x, width, color);
-        set_pixel_color(c, pixels, centreX - y, centreY + x, width, color);
 
         if (error <= 0) {
             ++y;
@@ -276,20 +246,51 @@ static void imp_canvas_rectangle_guide(ImpCanvas *canvas, ImpCursor *cursor) {
     canvas->rectangle_guide = guide;
 }
 
+static void imp_canvas_circle_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
+    size_t w_rect = 2*canvas->circle_guide->r;
+    size_t x_rect = w_rect/2;
+    size_t y_rect = w_rect/2;
+    uint32_t pixels[w_rect * w_rect];
+    for (size_t i = 0; i < w_rect * w_rect; ++i) {
+        size_t x = i % w_rect;
+        size_t y = i / w_rect;
+        if (pow(abs(x - x_rect), 2) + pow(abs(y - y_rect), 2) <= pow(canvas->circle_guide->r, 2)) {
+            u32 color = cursor->color;
+            pixels[i] = SDL_MapRGBA(canvas->pixel_format, rgb_red(color), rgb_green(color), rgb_blue(color), 0xFF);
+ 
+        } else {
+            // set to black and transparent
+            pixels[i] = 0;
+        }
+    }
+    uint32_t rmask, gmask, bmask, amask;
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    rmask = 0x000000FF;
+    gmask = 0x0000FF00;
+    bmask = 0x00FF0000;
+    amask = 0xFF000000;
+#else
+    rmask = 0xFF000000;
+    gmask = 0x00FF0000;
+    bmask = 0x0000FF00;
+    amask = 0x000000FF;
+#endif
+    SDL_Surface *circ_surf = SDL_CreateRGBSurfaceFrom(pixels, w_rect, w_rect, 32, 4 * w_rect, rmask,
+                                                      gmask, bmask, amask);
+    size_t xrel = canvas->circle_guide->x - canvas->rect.x;
+    size_t yrel = canvas->circle_guide->y - canvas->rect.y;
+    SDL_BlitSurface(circ_surf, NULL, canvas->surf,
+                    &(SDL_Rect){xrel - canvas->circle_guide->r,
+                                yrel - canvas->circle_guide->r, w_rect, w_rect});
+}
+
 static void imp_canvas_rectange_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
-    SDL_Rect relative = { fmax(0, canvas->rectangle_guide.x-canvas->rect.x),
-                          fmax(0, canvas->rectangle_guide.y-canvas->rect.y),
+    SDL_Rect relative = { fmax(0, canvas->rectangle_guide.x - canvas->rect.x),
+                          fmax(0, canvas->rectangle_guide.y - canvas->rect.y),
                           canvas->rectangle_guide.w,
                           canvas->rectangle_guide.h };
-    void *raw_data;
-    int pitch;
-    SDL_LockTexture(canvas->texture, &relative, &raw_data, &pitch);
-    u32 *pixels = (u32 *)raw_data;
-    int npixels = (pitch / 4) * canvas->rectangle_guide.h;
-    for (int i = 0; i < npixels; ++i) {
-        pixels[i] = imp_rgba(canvas, cursor->color);
-    }
-    SDL_UnlockTexture(canvas->texture);
+    u32 color = cursor->color;
+    SDL_FillRect(canvas->surf, &relative, SDL_MapRGBA(canvas->pixel_format, rgb_red(color), rgb_green(color), rgb_blue(color), 0xFF));
 }
 
 void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
@@ -332,7 +333,7 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
         } else if (cursor->mode == IMP_CIRCLE) {
             if (canvas->circle_guide) {
                 // TODO
-                // imp_canvas_circle_guide_draw(canvas, cursor);
+                imp_canvas_circle_guide_draw(canvas, cursor);
                 free(canvas->circle_guide);
                 canvas->circle_guide = NULL;
             }
@@ -344,10 +345,11 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
 
 void imp_canvas_render(SDL_Renderer *renderer, ImpCanvas *c) {
     SDL_RenderCopy(renderer, c->bg, NULL, &c->bg_rect);
-    SDL_RenderCopy(
-        renderer, c->texture, NULL,
-        &(SDL_Rect){c->rect.x + 0, c->rect.y + 0, c->rect.w - 0, c->rect.h - 0});
-    
+
+    SDL_Texture *canvas_texture = SDL_CreateTextureFromSurface(renderer, c->surf);
+    SDL_RenderCopy(renderer, canvas_texture, NULL, &c->rect);
+    SDL_DestroyTexture(canvas_texture);
+
     SDL_SetRenderDrawColor(renderer, 0xFF, 0, 0xFF, 255);
     SDL_RenderDrawRect(renderer, &c->rectangle_guide);
 
