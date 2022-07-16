@@ -4,18 +4,6 @@
 #define N_TOOL_BUTTONS 11
 #define W_TOOL_BUTTON 48
 #define H_TOOL_BUTTON 48
-
-typedef enum ImpTool {
-    IMP_TOOL_NOTHING,
-    IMP_TOOL_CURSOR,
-    IMP_TOOL_PENCIL,
-    IMP_TOOL_RECTANGLE,
-    IMP_TOOL_CIRCLE,
-    IMP_TOOL_LINE,
-    IMP_TOOL_BUCKET,
-    IMP_TOOL_STAMP,
-} ImpTool;
-
 #define BUTTON_0_TOOL IMP_TOOL_PENCIL
 #define BUTTON_1_TOOL IMP_TOOL_RECTANGLE
 #define BUTTON_2_TOOL IMP_TOOL_CIRCLE
@@ -30,6 +18,7 @@ typedef struct ImpToolButton {
 
 typedef struct ImpToolMenu {
     ImpToolButton **buttons;
+    ImpTool current_tool;
     int w_button, h_button;
     int n;
     int selected;
@@ -98,7 +87,8 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
 
     // set hardcoded tools/functions
     menu->selected = 0;
-    menu->buttons[0]->tool = BUTTON_0_TOOL;
+    menu->current_tool = BUTTON_0_TOOL;
+    menu->buttons[0]->tool = menu->current_tool;
     menu->buttons[1]->tool = BUTTON_1_TOOL;
     menu->buttons[2]->tool = BUTTON_2_TOOL;
     menu->buttons[3]->tool = BUTTON_3_TOOL;
@@ -108,36 +98,24 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
 }
 
 static void imp_toolmenu_dispatch(ImpToolMenu *menu, ImpToolButton *b, int i, ImpCursor *cursor) {
+    menu->selected = i;
+    menu->current_tool = b->tool;
+
     switch(b->tool) {
-    case IMP_TOOL_CURSOR: {
-        cursor->mode = IMP_CURSOR;
-        menu->selected = i;
-    } break;
-    case IMP_TOOL_PENCIL: {
-        cursor->mode = IMP_PENCIL;
-        menu->selected = i;
-    } break;
-    case IMP_TOOL_RECTANGLE: {
-        cursor->mode = IMP_RECTANGLE;
-        menu->selected = i;
-    } break;
-    case IMP_TOOL_CIRCLE: {
-        cursor->mode = IMP_CIRCLE;
-        menu->selected = i;
-    } break;
-    case IMP_TOOL_LINE: {
-        cursor->mode = IMP_LINE;
-        menu->selected = i;
-    } break;
-    case IMP_TOOL_BUCKET: {
-        cursor->mode = IMP_BUCKET;
-        menu->selected = i;
-    } break;
+    case IMP_TOOL_CURSOR: cursor->mode = IMP_CURSOR; break;
+    case IMP_TOOL_PENCIL: cursor->mode = IMP_PENCIL; break;
+    case IMP_TOOL_RECTANGLE: cursor->mode = IMP_RECTANGLE; break;
+    case IMP_TOOL_CIRCLE: cursor->mode = IMP_CIRCLE; break;
+    case IMP_TOOL_LINE: cursor->mode = IMP_LINE; break;
+    case IMP_TOOL_BUCKET: cursor->mode = IMP_BUCKET; break;
     default: printf("button task not implemented.\n"); break;
     }
 }
 
-void imp_toolmenu_event(ImpToolMenu *menu, SDL_Event *e, ImpCursor *cursor) {
+// returns non-zero when a tool change occurs
+ImpTool imp_toolmenu_event(ImpToolMenu *menu, SDL_Event *e, ImpCursor *cursor) {
+    ImpTool start_tool = menu->current_tool;
+
     switch (e->type) {
     case SDL_MOUSEBUTTONDOWN: {
         if (SDL_HasIntersection(&menu->rect, &cursor->rect)) {
@@ -150,6 +128,11 @@ void imp_toolmenu_event(ImpToolMenu *menu, SDL_Event *e, ImpCursor *cursor) {
         }
     } break;
     }
+
+    if (menu->current_tool != start_tool) {
+        return menu->current_tool;
+    }
+    return 0;
 }
 
 void imp_toolmenu_render(SDL_Renderer *renderer, ImpToolMenu *menu) {

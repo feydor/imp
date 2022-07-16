@@ -1,22 +1,19 @@
 #include "actionmenu.h"
 #include <SDL2/SDL_image.h>
 
-#define N_TOOL_BUTTONS 14
-#define W_TOOL_BUTTON 64
-#define H_TOOL_BUTTON 64
+#define N_ACTION_BUTTONS 14
+#define W_ACTION_BUTTON 64
+#define H_ACTION_BUTTON 64
 
 typedef enum ImpAction {
     IMP_ACTION_NOTHING,
-} ImpTool;
-
-#define BUTTON_0_TOOL IMP_TOOL_CURSOR
-#define BUTTON_1_TOOL IMP_TOOL_PENCIL
+} ImpAction;
 
 typedef struct ImpActionButton {
     SDL_Texture *texture;
     SDL_Rect rect;
     bool clicked;
-    ImpTool tool;
+    ImpAction action;
 } ImpActionButton;
 
 typedef struct ImpActionMenu {
@@ -37,9 +34,9 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
     // margin == outside background, padding == inside background
     int xpadding = 20, ypadding = 20;
     int xmargin = 40, ymargin = 48;
-    menu->n = N_TOOL_BUTTONS;
-    menu->w_button = W_TOOL_BUTTON;
-    menu->h_button = H_TOOL_BUTTON;
+    menu->n = N_ACTION_BUTTONS;
+    menu->w_button = W_ACTION_BUTTON;
+    menu->h_button = H_ACTION_BUTTON;
     menu->rect.x = canvas->rect.x + xmargin;
     menu->rect.y = canvas->rect.y + canvas->rect.h + ymargin + ypadding;
     menu->rect.w = menu->n * menu->w_button;
@@ -76,7 +73,7 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
             return NULL;
         }
         button->texture = text;
-        button->tool = IMP_ACTION_NOTHING;
+        button->action = IMP_ACTION_NOTHING;
         button->clicked = false;
         button->rect.x = menu->rect.x + i*menu->w_button + i*xpadding_button;
         button->rect.y = menu->rect.y;
@@ -88,6 +85,10 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
     }
 
     return menu;
+}
+
+void imp_actionmenu_ontoolchange(ImpActionMenu *menu, ImpTool tool) {
+    printf("ontoolchange\n");
 }
 
 void imp_actionmenu_event(ImpActionMenu *menu, SDL_Event *e, ImpCursor *cursor) {

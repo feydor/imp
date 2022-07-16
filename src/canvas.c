@@ -217,12 +217,12 @@ static void imp_canvas_line_guide(ImpCanvas *canvas, ImpCursor *cursor) {
 
 static void imp_canvas_circle_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     size_t w_rect = 2*canvas->circle_guide.r;
-    size_t x_rect = w_rect/2;
-    size_t y_rect = w_rect/2;
+    int x_rect = w_rect/2;
+    int y_rect = w_rect/2;
     uint32_t pixels[w_rect * w_rect];
     for (size_t i = 0; i < w_rect * w_rect; ++i) {
-        size_t x = i % w_rect;
-        size_t y = i / w_rect;
+        int x = i % w_rect;
+        int y = i / w_rect;
         if (pow(abs(x - x_rect), 2) + pow(abs(y - y_rect), 2) <= pow(canvas->circle_guide.r, 2)) {
             pixels[i] = imp_rgba(canvas, cursor->color);
         } else {
