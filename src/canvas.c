@@ -15,9 +15,9 @@ typedef struct ImpCircleGuide {
     unsigned x, y, r;
 } ImpCircleGuide;
 
-// TODO: check for endianess
+// rgb encoded color
 u32 imp_rgba(ImpCanvas *c, u32 color) {
-    return SDL_MapRGBA(c->pixel_format, rgb_blue(color), rgb_green(color), rgb_red(color), 255);
+    return SDL_MapRGBA(c->pixel_format, rgb_red(color), rgb_green(color), rgb_blue(color), 255);
 }
 
 ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer) {
@@ -34,32 +34,24 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer) {
     canvas->rect.w = W_CANVAS_RESOLUTION;
     canvas->rect.h = H_CANVAS_RESOLUTION;
 
-    // TODO: change this based on endianess
     u32 pixel_format;
-    #if SDL_BYTEORDER == SDL_BIG_ENDIAN
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
     pixel_format = SDL_PIXELFORMAT_RGBA32;
-    #else
+    canvas->masks.r = 0x0000FF00;
+    canvas->masks.g = 0x00FF0000;
+    canvas->masks.b = 0xFF000000;
+#else
     pixel_format = SDL_PIXELFORMAT_ABGR32;
-    #endif
+    canvas->masks.r = 0xFF000000;
+    canvas->masks.g = 0x00FF0000;
+    canvas->masks.b = 0x0000FF00;
+#endif
     canvas->pixel_format = SDL_AllocFormat(pixel_format);
-    canvas->pitch = 4*canvas->rect.w;
+    canvas->pitch = 4 * canvas->rect.w;
     canvas->depth = 32;
-    uint32_t rmask, gmask, bmask;
-    #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-        rmask = 0x0000FF00;
-        gmask = 0x00FF0000;
-        bmask = 0xFF000000;
-    #else
-        rmask = 0xFF000000;
-        gmask = 0x00FF0000;
-        bmask = 0x0000FF00;
-    #endif
-    canvas->surf = SDL_CreateRGBSurface(0, canvas->rect.w, canvas->rect.h, canvas->depth, rmask, gmask, bmask, 0x00);
+    canvas->surf = SDL_CreateRGBSurface(0, canvas->rect.w, canvas->rect.h, canvas->depth,
+                                        canvas->masks.r, canvas->masks.g, canvas->masks.b, 0xFF);
     SDL_FillRect(canvas->surf, NULL, 0xFFFFFFFF);
-
-    if (!canvas->surf) {
-        fprintf(stderr, "%s\n", SDL_GetError());
-    }
 
     int bgoff = 16;
     SDL_Surface *bg = IMG_Load("../res/png/border.png");
@@ -86,23 +78,6 @@ static int clamp(int val, int lower, int upper) { return max(lower, min(upper, v
 static void imp_canvas_pencil_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     int xrel = cursor->rect.x - canvas->rect.x;
     int yrel = cursor->rect.y - canvas->rect.y;
-
-    // upper bounds
-    if (cursor->rect.x + cursor->w_pencil >= canvas->rect.x + canvas->rect.w) {
-        xrel = canvas->rect.x + canvas->rect.w - cursor->w_pencil;
-    }
-    if (cursor->rect.y + cursor->h_pencil >= canvas->rect.y + canvas->rect.h) {
-        yrel = canvas->rect.y + canvas->rect.h - cursor->h_pencil;
-    }
-
-    // lower bounds
-    if (cursor->rect.x < canvas->rect.x) {
-        xrel = canvas->rect.x;
-    }
-    if (cursor->rect.y < canvas->rect.y) {
-        yrel = canvas->rect.y;
-    }
-
     SDL_Rect area = {xrel, yrel, cursor->w_pencil, cursor->h_pencil};
     SDL_FillRect(canvas->surf, &area, imp_rgba(canvas, cursor->color));
 }
@@ -263,20 +238,9 @@ static void imp_canvas_circle_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
             pixels[i] = 0;
         }
     }
-    uint32_t rmask, gmask, bmask, amask;
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    rmask = 0x000000FF;
-    gmask = 0x0000FF00;
-    bmask = 0x00FF0000;
-    amask = 0xFF000000;
-#else
-    rmask = 0xFF000000;
-    gmask = 0x00FF0000;
-    bmask = 0x0000FF00;
-    amask = 0x000000FF;
-#endif
-    SDL_Surface *circ_surf = SDL_CreateRGBSurfaceFrom(pixels, w_rect, w_rect, 32, 4 * w_rect, rmask,
-                                                      gmask, bmask, amask);
+
+    SDL_Surface *circ_surf = SDL_CreateRGBSurfaceFrom(pixels, w_rect, w_rect, 32, 4 * w_rect, canvas->masks.r,
+                                                      canvas->masks.g, canvas->masks.b, 0xFF);
     size_t xrel = canvas->circle_guide->x - canvas->rect.x;
     size_t yrel = canvas->circle_guide->y - canvas->rect.y;
     SDL_BlitSurface(circ_surf, NULL, canvas->surf,
@@ -332,7 +296,6 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor) {
             canvas->rectangle_guide = (SDL_Rect){0};
         } else if (cursor->mode == IMP_CIRCLE) {
             if (canvas->circle_guide) {
-                // TODO
                 imp_canvas_circle_guide_draw(canvas, cursor);
                 free(canvas->circle_guide);
                 canvas->circle_guide = NULL;

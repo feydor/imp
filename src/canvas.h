@@ -9,6 +9,10 @@ typedef uint32_t u32;
 
 typedef struct ImpCircleGuide ImpCircleGuide;
 
+typedef struct ImpColorMasks {
+    u32 r, g, b;
+} ImpColorMasks;
+
 typedef struct  {
     SDL_Rect rect;
     SDL_Surface *surf;
@@ -18,6 +22,7 @@ typedef struct  {
     SDL_PixelFormat *pixel_format;
     SDL_Rect rectangle_guide;
     ImpCircleGuide *circle_guide;
+    ImpColorMasks masks;
     size_t pitch; // bytes per row
     size_t depth; // RGBA bits
 } ImpCanvas;

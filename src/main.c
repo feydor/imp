@@ -22,7 +22,7 @@ static SDL_Texture *make_texture_from_bmp(SDL_Renderer *renderer, BMP_file *bmp)
         rmask = 0x0000FF;
         gmask = 0x00FF00;
         bmask = 0xFF0000;
-    #else // little endian
+    #else
         rmask = 0xFF0000;
         gmask = 0x00FF00;
         bmask = 0x0000FF;
