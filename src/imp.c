@@ -38,13 +38,13 @@ Imp *create_imp(SDL_Renderer *renderer, SDL_Window *window) {
     imp->canvas = create_imp_canvas(window, renderer, DEFAULT_OUTPUT_FILENAME);
     imp->colormenu = create_imp_colormenu(renderer, imp->canvas);
 
-    char *vert_bg = "../res/png/button-menu-vert-jp-lavender.png";
+    char *vert_bg = "res/png/button-menu-vert-jp-lavender.png";
     imp->toolmenu = create_imp_toolmenu(renderer, imp->canvas, vert_bg);
 
-    char *horiz_bg = "../res/png/button-menu-horiz-jp-lavender.png";
+    char *horiz_bg = "res/png/button-menu-horiz-jp-lavender.png";
     imp->actionmenu = create_imp_actionmenu(renderer, imp->canvas, horiz_bg);
     
-    SDL_Surface *bg_surf = IMG_Load("../res/patterns/bg.png");
+    SDL_Surface *bg_surf = IMG_Load("res/patterns/bg.png");
     imp->bg = SDL_CreateTextureFromSurface(renderer, bg_surf);
     imp->w_bg = bg_surf->w;
     imp->h_bg = bg_surf->h;

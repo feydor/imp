@@ -1,5 +1,6 @@
 #include "toolmenu.h"
 #include <SDL2/SDL_image.h>
+#include <stdio.h>
 
 #define N_TOOL_BUTTONS 11
 #define W_TOOL_BUTTON 48
@@ -63,7 +64,7 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
     int ypadding_button = 10;
     for (int i = 0; i < menu->n; ++i) {
         char path[255];
-        sprintf(path, "../res/icons/tool-button%d.webp", i);
+        sprintf(path, "res/icons/tool-button%d.png", i);
         SDL_Surface *surf = IMG_Load(path);
         SDL_Texture *text = NULL;
         if (!surf) {

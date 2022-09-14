@@ -3,6 +3,7 @@
 #include "system/bmp.h"
 #include "system/palette.h"
 #include "vector.h"
+#include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -50,7 +51,7 @@ static int sdl_ui(char *src) {
         exit(fprintf(stderr, "Could not create SDL Renderer\n"));
     }
 
-    IMG_Init(IMG_INIT_PNG | IMG_INIT_WEBP);
+    IMG_Init(IMG_INIT_PNG);
     // TODO: load the user's file
     // SDL_Surface *surf = IMG_Load(src);
     // SDL_Surface *formatted = SDL_ConvertSurfaceFormat(surf, SDL_GetWindowPixelFormat(window), 0);

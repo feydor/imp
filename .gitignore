@@ -17,3 +17,8 @@ subprojects/*/
 lol.bmp
 RESULT.bmp
 test/
+
+SDL2/
+SDL2_image/
+lib/
+include/

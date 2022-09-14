@@ -1,5 +1,6 @@
 #include "actionmenu.h"
 #include <SDL2/SDL_image.h>
+#include <stdio.h>
 
 #define N_ACTION_BUTTONS 14
 #define W_ACTION_BUTTON 64
@@ -59,7 +60,7 @@ ImpActionMenu *create_imp_actionmenu(SDL_Renderer *renderer, ImpCanvas *canvas, 
     int xpadding_button = 6;
     for (int i = 0; i < menu->n; ++i) {
         char path[255];
-        sprintf(path, "../res/icons/action-button%d.bmp", i);
+        sprintf(path, "res/icons/action-button%d.bmp", i);
         SDL_Surface *surf = SDL_LoadBMP(path);
         SDL_Texture *text = NULL;
         if (!surf) {

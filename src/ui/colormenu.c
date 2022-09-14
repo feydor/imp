@@ -1,7 +1,7 @@
 #include "colormenu.h"
 #include <SDL2/SDL_image.h>
 
-#define BG_PATH "../res/png/color-menu-vert-jp-lavender.png"
+#define BG_PATH "res/png/color-menu-vert-jp-lavender.png"
 #define N_COLORS 16
 #define SIZE_COLOR_BUTTON 24
 #define H_COLOR_DISPLAY SIZE_COLOR_BUTTON

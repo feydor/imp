@@ -2,6 +2,8 @@
 #include "ui/toolmenu.h"
 #include <stdlib.h>
 #include <SDL2/SDL_image.h>
+#include <math.h>
+#include <stdio.h>
 
 #define W_CANVAS_RESOLUTION 1080
 #define H_CANVAS_RESOLUTION 720
@@ -52,7 +54,7 @@ ImpCanvas *create_imp_canvas(SDL_Window *window, SDL_Renderer *renderer, char *o
     SDL_FillRect(canvas->surf, NULL, 0xFFFFFFFF);
 
     int bgoff = 16;
-    SDL_Surface *bg = IMG_Load("../res/png/border.png");
+    SDL_Surface *bg = IMG_Load("res/png/border.png");
     canvas->bg = SDL_CreateTextureFromSurface(renderer, bg);
     canvas->bg_rect = (SDL_Rect){
         canvas->rect.x-bgoff, canvas->rect.y-bgoff, bg->w+bgoff, bg->h+bgoff
