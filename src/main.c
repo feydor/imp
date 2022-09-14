@@ -15,6 +15,8 @@
 
 static void usage() { fprintf(stderr, "%s [input]\n", PROGNAME); }
 
+// Assumes Little-endian, 24bit bmp
+// bmp data is stored starting at bottom-left corner
 static SDL_Texture *make_texture_from_bmp(SDL_Renderer *renderer, BMP_file *bmp) {
     int depth = 24;
     int pitch = 3 * bmp->w;
@@ -39,30 +41,32 @@ static SDL_Texture *make_texture_from_bmp(SDL_Renderer *renderer, BMP_file *bmp)
 }
 
 
-static int sdl_ui(char *src) {
+static int sdl_ui() {
     SDL_Window *window = SDL_CreateWindow("imp", SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED, DEFAULT_WINDOW_W,
-        DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        DEFAULT_WINDOW_H, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
         SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     
     if (!renderer) {
-        exit(fprintf(stderr, "Could not create SDL Renderer\n"));
+        return fprintf(stderr, "Could not create SDL Renderer\n");
     }
 
     IMG_Init(IMG_INIT_PNG);
+    SDL_Surface *surf = IMG_Load("res/icons/window.png");
+    SDL_SetWindowIcon(window, surf);
+    SDL_FreeSurface(surf);
     // TODO: load the user's file
     // SDL_Surface *surf = IMG_Load(src);
     // SDL_Surface *formatted = SDL_ConvertSurfaceFormat(surf, SDL_GetWindowPixelFormat(window), 0);
 
     Imp *imp = create_imp(renderer, window);
     if (!imp) {
-        exit(fprintf(stderr, "imp was NULL\n"));
+        return fprintf(stderr, "imp was NULL\n");
     }
 
     SDL_Event e;
-
     float dt = 1000.0f / 60.0f;
     while (1) {
         uint64_t t0 = SDL_GetTicks64();
@@ -84,24 +88,16 @@ static int sdl_ui(char *src) {
 }
 
 
-// Assumes Little-endian, 24bit bmp
-// bmp data is stored starting at bottom-left corner
-// flags and palette are optional
 int main(int argc, char *argv[]) {
+    (void) argc;
+    (void) argv;
     srand(time(NULL));
 
-    if (argc != 2) {
-        usage();
-        exit(-1);
-    }
-
-    // TODO: BMP_load
-
-    int ret_code = sdl_ui(argv[1]);
+    int ret_code = sdl_ui();
     if (ret_code != 0) {
         perror("main");
         return EXIT_FAILURE;
     }
 
-    return EXIT_SUCCESS;
+    return ret_code;
 }
