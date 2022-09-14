@@ -1,32 +1,19 @@
-# imp - an image processing utility
-aspiring cli bmp editing program
+# imp
+a fun kidpix-like program for drawing bitmaps, very wip
 
-```console
-Usage: imp [OPTIONS] INPUT
+# screenshot
+<img src="/res/main.png" width="600" />
 
-Options:
-    -h, --help               Display this message
-    -f, --flags              Image processing passes
-    -i, --input              Input filename
-    -o, --output             Write output to filename
-
-Flags:
-     d     ordered dithering
-     g     grayscale
-     i     invert
-     n     uniform noise
-     p     palette quantization
-```
-
-## results
-![some results](/res/some-results.png)<br />
-*clockwise from top-left: original, ordered dithering, inversion, uniform noise, dithering + palette quantization, several filters*
+## dependencies
+[SDL2](https://www.libsdl.org/)<br />
+[SDL2_Image](https://github.com/libsdl-org/SDL_image)<br />
+[MINGW32 (for Windows only)](https://www.msys2.org/)<br />
 
 ## build
 ```console
 git clone https://github.com/feydor/imp
 cd imp
-mkdir build && cd build
-./../build.sh
-./imp ../david.bmp -o ../result.bmp -f dg
+mkdir build
+./build.sh
+./build/imp
 ```
