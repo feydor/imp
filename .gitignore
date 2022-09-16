@@ -14,8 +14,8 @@ subprojects/*/
 *.exe
 *.save
 
-lol.bmp
-RESULT.bmp
+*.bmp
+*.png
 test/
 
 SDL2/

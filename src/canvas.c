@@ -221,28 +221,24 @@ static void imp_canvas_line_guide(ImpCanvas *canvas, ImpCursor *cursor) {
 }
 
 static void imp_canvas_circle_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
-    size_t w_rect = 2*canvas->circle_guide.r;
-    int x_rect = w_rect/2;
-    int y_rect = w_rect/2;
-    uint32_t pixels[w_rect * w_rect];
-    for (size_t i = 0; i < w_rect * w_rect; ++i) {
-        int x = i % w_rect;
-        int y = i / w_rect;
-        if (pow(abs(x - x_rect), 2) + pow(abs(y - y_rect), 2) <= pow(canvas->circle_guide.r, 2)) {
-            pixels[i] = imp_rgba(canvas, cursor->color);
-        } else {
-            // set to black and transparent
-            pixels[i] = 0;
-        }
+    size_t diameter = 2*canvas->circle_guide.r;
+    int x_rect = diameter/2;
+    int y_rect = diameter/2;
+    uint32_t pixels[diameter * diameter];
+    for (size_t i = 0; i < diameter * diameter; ++i) {
+        int x = i % diameter;
+        int y = i / diameter;
+        bool within_circle = pow(abs(x - x_rect), 2) + pow(abs(y - y_rect), 2) <= pow(canvas->circle_guide.r, 2);
+        pixels[i] = within_circle ? imp_rgba(canvas, cursor->color) : 0;
     }
 
-    SDL_Surface *circ_surf = SDL_CreateRGBSurfaceFrom(pixels, w_rect, w_rect, 32, 4 * w_rect, canvas->masks.r,
+    SDL_Surface *circ_surf = SDL_CreateRGBSurfaceFrom(pixels, diameter, diameter, 32, 4 * diameter, canvas->masks.r,
                                                       canvas->masks.g, canvas->masks.b, 0xFF);
     size_t xrel = canvas->circle_guide.x - canvas->rect.x;
     size_t yrel = canvas->circle_guide.y - canvas->rect.y;
     SDL_BlitSurface(circ_surf, NULL, canvas->surf,
                     &(SDL_Rect){xrel - canvas->circle_guide.r,
-                                yrel - canvas->circle_guide.r, w_rect, w_rect});
+                                yrel - canvas->circle_guide.r, diameter, diameter});
     SDL_FreeSurface(circ_surf);
 }
 

@@ -95,7 +95,7 @@ ImpToolMenu *create_imp_toolmenu(SDL_Renderer *renderer, ImpCanvas *canvas, char
     menu->buttons[1]->tool = BUTTON_1_TOOL;
     menu->buttons[2]->tool = BUTTON_2_TOOL;
     menu->buttons[3]->tool = BUTTON_3_TOOL;
-    menu->buttons[4]->tool = BUTTON_4_TOOL;
+    // menu->buttons[4]->tool = BUTTON_4_TOOL;
     // ...
     menu->buttons[10]->tool = BUTTON_10_TOOL;
 
@@ -146,7 +146,10 @@ void imp_toolmenu_render(SDL_Renderer *renderer, ImpToolMenu *menu) {
     for (int i = 0; i < menu->n; ++i) {
         ImpToolButton *button = menu->buttons[i];
         SDL_RenderCopy(renderer, button->texture, NULL, &button->rect);
-        if (i == menu->selected) {
+        if (button->tool == IMP_TOOL_NOTHING) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
+            SDL_RenderFillRect(renderer, &button->rect);
+        } else if (i == menu->selected) {
             // TODO: render a slightly larger pre-loaded verison, about 10 px
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 50);
             SDL_RenderFillRect(renderer, &button->rect);
