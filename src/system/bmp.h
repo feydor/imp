@@ -10,6 +10,7 @@
 #define BMP_MAGIC 0x4D42
 
 typedef unsigned char uchar;
+typedef unsigned int uint;
 
 typedef struct {
     uint16_t  ftype;        /* specifies the filetype, 0x424D specifies BMP */
@@ -47,16 +48,20 @@ typedef enum {
 typedef struct {
     BMP_file_header *file_header;
     BMP_info_header *info_header;
-    uchar *raw_image;
-    unsigned width_px;
-    unsigned height_px;
-    size_t image_size_bytes;
+    uchar *image_raw;               // image without end of row padding
+    unsigned w;
+    unsigned h;
+    unsigned size_with_padding;
+    unsigned size_bytes;            // size without padding
 } BMP_file;
 
 /** all BMP_* functions set the global bmp_err variable on error and then return -1*/
 int BMP_load(BMP_file *bmp, const char *src);
 int BMP_write(BMP_file *file, const char *dest);
 void BMP_print_dimensions(BMP_file *bmp);
+void BMP_set_pixel(BMP_file *bmp, uint x, uint y, uint32_t rgb);
+void BMP_reverse(uchar *dest, uchar *src, size_t height, size_t width_bytes, size_t nbytes);
+void buf_flip_horiz(uchar *dest, uchar *src, uint height, uint width_bytes);
 void BMP_free(BMP_file *bmp);
 
 #endif
