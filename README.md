@@ -1,5 +1,5 @@
 # imp
-a fun kidpix-like program for drawing bitmaps, very wip
+a fun kidpix-like program for drawing and saving bitmaps, very wip
 
 # screenshot
 <img src="/res/main.png" width="600" />
