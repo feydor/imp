@@ -14,7 +14,7 @@ typedef struct ImpColorMasks {
 } ImpColorMasks;
 
 typedef struct ImpCircleGuide {
-    unsigned x, y, r;
+    int x, y, r;
 } ImpCircleGuide;
 
 typedef struct ImpLineGuide {

@@ -94,6 +94,18 @@ static void set_pixel_color(ImpCanvas *c, u32 *pixels, int x, int y, int width, 
     pixels[x + y * width] = imp_rgba(c, color);
 }
 
+/**
+ * Is the circle out-of-bounds with the rect?
+ * @return true if oob
+ */
+static bool is_circle_oob(ImpCircleGuide circle, SDL_Rect *rect) {
+    bool oob_top = circle.y - circle.r <= rect->y;
+    bool oob_bottom = circle.y + circle.r >= rect->y + rect->h;
+    bool oob_right = circle.x + circle.r >= rect->x + rect->w;
+    bool oob_left = circle.x - circle.r <= rect->x;
+    return oob_top || oob_bottom || oob_left || oob_right;
+}
+
 // unused because slow
 static void line_gradient(ImpCanvas *c, SDL_Surface *surf, u32 color, int x1, int x2, int y1, int y2) {
     int dx = x2 - x1;
@@ -220,6 +232,56 @@ static void imp_canvas_line_guide(ImpCanvas *canvas, ImpCursor *cursor) {
     canvas->line_guide = guide;
 }
 
+// static SDL_Surface* create_circle_surface(ImpCanvas *canvas, int radius, u32 color) {
+//     int diameter = 2 * radius;
+//     // SDL_Surface *circ_surf = SDL_CreateRGBSurface(0, diameter, diameter, 32, canvas->masks.r,
+//     //     canvas->masks.g, canvas->masks.b, canvas->masks.a);
+//     SDL_Surface *circ_surf = SDL_CreateRGBSurfaceWithFormat(0, diameter, diameter, 32, canvas->pixel_format->format);
+//     printf("format=%s\n", SDL_GetPixelFormatName(circ_surf->format->format));
+    
+//     // Fill the surface with pixels that form the circle
+//     Uint32* pixels = (Uint32*)circ_surf->pixels;
+//     for (int y = 0; y < diameter; ++y) {
+//         for (int x = 0; x < diameter; ++x) {
+//             int dx = radius - x;
+//             int dy = radius - y;
+//             if ((dx * dx + dy * dy) <= (radius * radius)) {
+//                 pixels[y * diameter + x] = SDL_MapRGB(circ_surf->format, color, 0, 0);
+//             } else {
+//                 pixels[y * diameter + x] = SDL_MapRGB(circ_surf->format, 0, 0, 0); // transparent
+//             }
+//         }
+//     }
+
+//     return circ_surf;
+// }
+
+// static void imp_canvas_circle_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
+//     SDL_Surface *circ_surf = create_circle_surface(canvas, canvas->circle_guide.r, cursor->color);
+
+//     int diameter = 2 * canvas->circle_guide.r;
+//     int x_start = canvas->circle_guide.x - canvas->rect.x - canvas->circle_guide.r;
+//     int y_start = canvas->circle_guide.y - canvas->rect.y - canvas->circle_guide.r;
+//     SDL_Rect dest_rect = {.x=x_start, .y=y_start, .w=diameter, .h=diameter};
+
+//     // clip dest_rect to the boundaries of the canvas
+//     if (dest_rect.x <= canvas->rect.x) {
+//         dest_rect.x = canvas->rect.x + 1;
+//     }
+//     if (dest_rect.y <= canvas->rect.y) {
+//         dest_rect.y = canvas->rect.y + 1;
+//     }
+//     if (dest_rect.x + dest_rect.w >= canvas->rect.x + canvas->rect.w) {
+//         dest_rect.w = canvas->rect.x + canvas->rect.w - dest_rect.x;
+//     }
+//     if (dest_rect.y + dest_rect.h >= canvas->rect.y + canvas->rect.h) {
+//         dest_rect.h = canvas->rect.y + canvas->rect.h - dest_rect.y;
+//     }
+
+//     SDL_BlitSurface(circ_surf, NULL, canvas->surf, &dest_rect);
+//     SDL_FreeSurface(circ_surf);
+// }
+
 static void imp_canvas_circle_guide_draw(ImpCanvas *canvas, ImpCursor *cursor) {
     size_t diameter = 2*canvas->circle_guide.r;
     int x_rect = diameter/2;
@@ -305,7 +367,10 @@ void imp_canvas_event(ImpCanvas *canvas, SDL_Event *e, ImpCursor *cursor, ImpToo
             imp_canvas_rectange_guide_draw(canvas, cursor);
             canvas->rectangle_guide = (SDL_Rect){0};
         } else if (cursor->mode == IMP_CIRCLE) {
-            imp_canvas_circle_guide_draw(canvas, cursor);
+            if (!is_circle_oob(canvas->circle_guide, &canvas->rect)) {
+                // TODO: if circle guide is OOB, then paint the portion that is inbounds
+                imp_canvas_circle_guide_draw(canvas, cursor);
+            }
             canvas->circle_guide = (ImpCircleGuide){0};
         } else if (cursor->mode == IMP_LINE) {
             imp_canvas_line_guide_draw(canvas, cursor);
